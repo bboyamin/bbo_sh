@@ -285,6 +285,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+
+
 # 🎓 대시보드 헤더 렌더링
 st.markdown('<div class="brand-title">🎓 BBOYAMIN 스마트 스쿨 에이전트</div>', unsafe_allow_html=True)
 st.markdown('<div class="brand-subtitle">학교알리미 공시 및 나이스(NEIS) 실시간 급식·학사일정을 한 번에 파악하는 지능형 비서입니다.</div>', unsafe_allow_html=True)
