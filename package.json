@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "mcp-remote": "^0.1.38",
+    "schoolinfo-mcp": "^0.2.0"
+  }
+}
