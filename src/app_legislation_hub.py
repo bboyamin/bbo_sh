@@ -224,7 +224,7 @@ def agentic_law_fetch(user_prompt: str) -> dict:
         law_name = "개인정보 보호법"
     
     if law_name == "NONE" or not law_name:
-        return {"content": "", "titles": []}
+        return {"content": f"[오류] 질문 분석 실패 (사용자의 질문에서 어떤 법령/조례를 매칭해야 할지 AI 분석기가 판정하지 못했습니다. 질문 내용: '{user_prompt}')", "titles": []}
         
     # 2-2. 1단계: 법제처 검색 쿼리 실행
     search_keyword = law_name
@@ -287,7 +287,7 @@ def agentic_law_fetch(user_prompt: str) -> dict:
                     break
                 
     if not best_id:
-        return {"content": f"[오류] 법령 매칭 실패 (검색 결과에서 유효한 MST/ID를 추출하지 못했습니다. 결과 원본: {search_raw[:400]})", "titles": []}
+        return {"content": f"[오류] 법령 매칭 실패 (AI가 추론한 법령명: '{law_name}', 검색어: '{search_keyword}', 특정조항: '{specific_jo}', 결과 원본: {search_raw[:300]})", "titles": []}
         
     # 2-3. 2단계: 본문 및 특정 조항 자동 수집
     context_data = ""
