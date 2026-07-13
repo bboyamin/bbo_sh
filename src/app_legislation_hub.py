@@ -226,18 +226,65 @@ def agentic_law_fetch(user_prompt: str) -> dict:
     if law_name == "NONE" or not law_name:
         return {"content": f"[오류] 질문 분석 실패 (사용자의 질문에서 어떤 법령/조례를 매칭해야 할지 AI 분석기가 판정하지 못했습니다. 질문 내용: '{user_prompt}')", "titles": []}
         
-    # 2-2. 1단계: 법제처 검색 쿼리 실행
-    search_keyword = law_name
-    search_raw = run_legislation_list_only(search_keyword)
+    # 2-2. 1단계: 법제처 검색 쿼리 실행 (점진적 단순화 및 재시도 루프)
+    # 검색 쿼리 점진적 축소 후보군 구축
+    search_candidates = [law_name]
+    
+    # "공영" <-> "공용" 교차 보완
+    if "공영" in law_name:
+        search_candidates.append(law_name.replace("공영", "공용"))
+    elif "공용" in law_name:
+        search_candidates.append(law_name.replace("공용", "공영"))
+        
+    # 뒤쪽 상투 어구 제거
+    clean_name = re.sub(r'(?:의\s*)?(?:운영\s*및\s*)?(?:설치\s*및\s*)?(?:관리\s*)?(?:조례|시행규칙|규칙|법|법률)$', '', law_name).strip()
+    if clean_name and clean_name != law_name:
+        search_candidates.append(clean_name)
+        if "공영" in clean_name:
+            search_candidates.append(clean_name.replace("공영", "공용"))
+        elif "공용" in clean_name:
+            search_candidates.append(clean_name.replace("공용", "공영"))
+            
+    # 단어 쪼개서 추가 축소
+    words = clean_name.split()
+    if len(words) >= 3:
+        search_candidates.append(" ".join(words[:2]))
+        search_candidates.append(words[1])
+    elif len(words) == 2:
+        search_candidates.append(words[1])
+        
+    # 중복 제거 및 순서 보존
+    seen = set()
+    final_queries = []
+    for q in search_candidates:
+        q_clean = q.strip()
+        if q_clean and q_clean not in seen and len(q_clean) >= 2:
+            seen.add(q_clean)
+            final_queries.append(q_clean)
+            
+    # 순차 재시도 작동
+    search_raw = ""
+    last_query_used = law_name
+    for query in final_queries:
+        last_query_used = query
+        search_raw = run_legislation_list_only(query)
+        
+        # 목록을 정상적으로 1건 이상 찾았다면 즉시 검색 완료로 간주하고 중단
+        if "[오류]" not in search_raw and search_raw.strip() and "결과가 없습니다" not in search_raw and "찾지 못했습니다" not in search_raw:
+            break
+            
     if "[오류]" in search_raw:
         return {"content": search_raw, "titles": []}
         
-    if "찾지 못했습니다" in search_raw or not search_raw.strip():
-        # 지자체 조례 실패 시 경기도 보정 후 재검색
+    # 만약 지자체 조례 실패 시 경기도/용인시 보정 후 최종 재검색
+    if "찾지 못했습니다" in search_raw or "결과가 없습니다" in search_raw or not search_raw.strip():
         if "조례" in law_name and not any(w in law_name for w in ["서울특별시", "경기도", "용인시"]):
-            search_raw = run_legislation_list_only(f"용인시 {law_name}")
+            last_query_used = f"용인시 {law_name}"
+            search_raw = run_legislation_list_only(last_query_used)
             if "[오류]" in search_raw:
                 return {"content": search_raw, "titles": []}
+                
+    search_keyword = last_query_used
             
     best_id = None
     eval_mode = "law"
