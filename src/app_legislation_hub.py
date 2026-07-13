@@ -42,8 +42,14 @@ st.markdown("""
 # 1. 법제처 MCP API 비동기 수집 코어
 # ===================================================
 async def fetch_legislation_list_only_mcp(query_str: str) -> str:
+    npx_cmd = "npx"
+    for p in ["/usr/local/bin/npx", "/usr/bin/npx", "/opt/homebrew/bin/npx"]:
+        if os.path.exists(p):
+            npx_cmd = p
+            break
+            
     server_params = StdioServerParameters(
-        command="/usr/local/bin/npx",
+        command=npx_cmd,
         args=["-y", "korean-law-mcp"],
         env={"LAW_OC": LAW_OC, "PATH": f"/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:{os.environ.get('PATH', '')}"}
     )
@@ -71,8 +77,14 @@ def run_legislation_list_only(query_str: str) -> str:
         return f"[오류] 목록 비동기 에러: {e}"
 
 async def fetch_single_legislation_body_mcp(best_id: str, mode: str, jo: str = None) -> str:
+    npx_cmd = "npx"
+    for p in ["/usr/local/bin/npx", "/usr/bin/npx", "/opt/homebrew/bin/npx"]:
+        if os.path.exists(p):
+            npx_cmd = p
+            break
+            
     server_params = StdioServerParameters(
-        command="/usr/local/bin/npx",
+        command=npx_cmd,
         args=["-y", "korean-law-mcp"],
         env={"LAW_OC": LAW_OC, "PATH": f"/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:{os.environ.get('PATH', '')}"}
     )
