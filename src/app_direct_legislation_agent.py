@@ -87,6 +87,43 @@ st.markdown("""
     div[data-testid="stSidebar"] div[data-testid="stColumn"] button:active {
         background-color: transparent !important;
     }
+    
+    /* [프리미엄 챗봇 가독성 스킨 시스템] */
+    /* 1. 사용자 질문 전체 카드 디자인 */
+    div[data-testid="stChatMessage"]:has(.user-trigger) {
+        background-color: #eff6ff !important; /* 부드러운 스카이블루 배경 */
+        border-left: 5px solid #3b82f6 !important; /* 블루 칼라 바 */
+        border-radius: 12px !important;
+        padding: 16px !important;
+        margin-top: 12px !important;
+        margin-bottom: 12px !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+    }
+    
+    /* 2. AI 자문 의견서 전체 카드 디자인 */
+    div[data-testid="stChatMessage"]:has(.assistant-trigger) {
+        background-color: #ffffff !important; /* 순백색 기안 보고서 배경 */
+        border-left: 5px solid #0d9488 !important; /* 오피스 그린 세로선 바 */
+        border: 1px solid #e5e7eb !important;
+        border-top-left-radius: 4px !important;
+        border-bottom-left-radius: 4px !important;
+        border-top-right-radius: 12px !important;
+        border-bottom-right-radius: 12px !important;
+        padding: 20px !important;
+        margin-top: 12px !important;
+        margin-bottom: 25px !important; /* 다음 질문과의 충분한 마진 확보 */
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+    }
+    
+    /* 대화 턴 변경 구분용 그라데이션 선 효과 */
+    div[data-testid="stChatMessage"]:has(.assistant-trigger)::after {
+        content: "" !important;
+        display: block !important;
+        width: 100% !important;
+        height: 1px !important;
+        background: radial-gradient(circle, #d1d5db 0%, rgba(209, 213, 219, 0) 100%) !important;
+        margin-top: 25px !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -489,17 +526,18 @@ with tab_chat:
         """
         st.components.v1.html(js, height=0)
         
-    # 1. 누적된 대화 이력을 화면 상단에 순차적으로 렌더링
+    # 1. 누적된 대화 이력을 화면 상단에 순차적으로 렌더링 (구분 식별자 주입)
     for msg in st.session_state.chat_history:
         with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+            trigger = '<span class="user-trigger"></span>' if msg["role"] == "user" else '<span class="assistant-trigger"></span>'
+            st.markdown(f'{trigger}{msg["content"]}', unsafe_allow_html=True)
             
     # 2. 사용자 질문 입력창 (대화 이력 하단 고정)
     if prompt := st.chat_input("장착된 법률/조례를 바탕으로 AI 행정 자문관에게 질문해 보세요..."):
         # 사용자의 질문 즉시 화면 렌더링 및 이력 누적
         st.session_state.chat_history.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
-            st.markdown(prompt)
+            st.markdown(f'<span class="user-trigger"></span>{prompt}', unsafe_allow_html=True)
         # 질문 전송 즉시 스크롤을 맨 아래로 당겨 로딩 스피너 확보
         scroll_to_bottom()
             
@@ -508,7 +546,7 @@ with tab_chat:
             scroll_to_bottom() # AI 답변 시작 시점에도 스크롤 재정돈
             if not context_str.strip():
                 warn_msg = "⚠️ 현재 장착된 법규가 없습니다. 사이드바에서 법규를 장착하시면 이를 토대로 법적 근거가 포함된 답변을 해 드립니다."
-                st.warning(warn_msg)
+                st.warning(f'<span class="assistant-trigger"></span>{warn_msg}', unsafe_allow_html=True)
                 st.session_state.chat_history.append({"role": "assistant", "content": warn_msg})
             else:
                 with st.spinner("🤖 AI 행정 자문관이 조문과 판례를 교차 분석하여 전문 의견서를 작성 중입니다. (최대 1~2분 소요)..."):
@@ -549,7 +587,7 @@ with tab_chat:
                         res.raise_for_status()
                         answer = res.json()['choices'][0]['message']['content']
                         
-                        st.markdown(answer)
+                        st.markdown(f'<span class="assistant-trigger"></span>{answer}', unsafe_allow_html=True)
                         st.session_state.chat_history.append({"role": "assistant", "content": answer})
                         
                         # 텍스트 파일 저장용 내보내기 다운로드 버튼 제공 (편의사항)
