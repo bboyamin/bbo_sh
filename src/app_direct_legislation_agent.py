@@ -68,15 +68,17 @@ def clean_html_tags(text: str) -> str:
     # 모든 HTML 태그(<...>)를 제거하고 공백을 정돈합니다.
     return re.sub(r'<[^>]*>', '', text).strip()
 
-def search_law_api(query: str, search_target: str) -> list:
+def search_law_api(query: str, search_target: str, page: int = 1) -> list:
     """
-    search_target: 'elaw' (국가법령), 'eordin' (자치법규), 'eadmrul' (행정규칙), 'eprec' (판례)
+    search_target: 'elaw' (국가법령), 'ordin' (자치법규), 'admrul' (행정규칙), 'prec' (판례)
     """
     url = "http://www.law.go.kr/DRF/lawSearch.do"
     params = {
         "OC": LAW_OC,
         "target": search_target,
         "query": query,
+        "pageNo": page,
+        "numOfRows": 20,
         "type": "XML"
     }
     
@@ -283,17 +285,31 @@ target_map = {
 
 search_keyword = st.sidebar.text_input("검색 키워드 입력", placeholder="예: 개인정보, 주차장")
 
-# 세션 상태 관리 (장착한 문서 리스트)
+# 세션 상태 관리 (장착한 문서 리스트 및 페이지 번호)
 if "selected_docs" not in st.session_state:
     st.session_state.selected_docs = {}  # {mst: {"title": title, "type": type}}
 
-if search_keyword.strip():
+if "search_page" not in st.session_state:
+    st.session_state.search_page = 1
+if "last_query" not in st.session_state:
+    st.session_state.last_query = ""
+if "last_category" not in st.session_state:
+    st.session_state.last_category = ""
+
+# 검색어 또는 카테고리가 달라진 경우 검색 페이지 1로 리셋
+current_query = search_keyword.strip()
+if current_query != st.session_state.last_query or category != st.session_state.last_category:
+    st.session_state.search_page = 1
+    st.session_state.last_query = current_query
+    st.session_state.last_category = category
+
+if current_query:
     with st.sidebar.status("📡 법제처 Open API 검색 중...", expanded=True):
         search_target = target_map[category]
-        search_results = search_law_api(search_keyword, search_target)
+        search_results = search_law_api(current_query, search_target, page=st.session_state.search_page)
         
         if search_results:
-            st.write(f"검색 결과 (총 {len(search_results)}건):")
+            st.write(f"검색 결과 (총 {len(search_results)}건 / 페이지: {st.session_state.search_page}):")
             for item in search_results:
                 mst = item["mst"]
                 title = item["title"]
@@ -315,6 +331,28 @@ if search_keyword.strip():
                 elif not cb and is_selected:
                     st.session_state.selected_docs.pop(mst, None)
                     st.rerun()
+                    
+            # 페이징 제어 버튼 영역
+            st.write("---")
+            col1, col2 = st.columns(2)
+            
+            # 이전 페이지
+            if st.session_state.search_page > 1:
+                if col1.button("⬅️ 이전 20건", use_container_width=True):
+                    st.session_state.search_page -= 1
+                    st.rerun()
+            else:
+                col1.button("⬅️ 이전 20건", disabled=True, use_container_width=True)
+                
+            # 다음 페이지 (20건 가득 채워져서 왔으면 다음 페이지가 존재할 가능성이 높음)
+            if len(search_results) >= 20:
+                if col2.button("다음 20건 ➡️", use_container_width=True):
+                    st.session_state.search_page += 1
+                    st.rerun()
+            else:
+                col2.button("다음 20건 ➡️", disabled=True, use_container_width=True)
+                
+            st.caption(f"현재 페이지 번호: {st.session_state.search_page} page")
         else:
             st.info("검색된 법령이 없습니다. 키워드를 변경해 보세요.")
 
