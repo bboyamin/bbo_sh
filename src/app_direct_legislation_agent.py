@@ -95,7 +95,7 @@ def search_law_api(query: str, search_target: str) -> list:
                     "detail": f"{clean_html_tags(item.findtext('법령구분명', ''))} | 공포일: {item.findtext('공포일자', '')}",
                     "type": "law"
                 })
-        elif search_target == "eordin":
+        elif search_target == "ordin":
             for item in root.findall(".//main"):
                 results.append({
                     "title": clean_html_tags(item.findtext("자치법규명한글", "이름 없음")),
@@ -103,7 +103,7 @@ def search_law_api(query: str, search_target: str) -> list:
                     "detail": f"{clean_html_tags(item.findtext('지자체명', '지자체 미상'))} | 공포번호: {item.findtext('공포번호', '')}",
                     "type": "ordinance"
                 })
-        elif search_target == "eadmrul":
+        elif search_target == "admrul":
             for item in root.findall(".//admRul"):
                 results.append({
                     "title": clean_html_tags(item.findtext("행정규칙명", "이름 없음")),
@@ -111,7 +111,7 @@ def search_law_api(query: str, search_target: str) -> list:
                     "detail": f"{clean_html_tags(item.findtext('소관부처명', ''))} | 고시번호: {item.findtext('행정규칙번호', '')}",
                     "type": "admrul"
                 })
-        elif search_target == "eprec":
+        elif search_target == "prec":
             for item in root.findall(".//prec"):
                 raw_case_no = clean_html_tags(item.findtext("사건번호", "번호 미상"))
                 raw_case_name = clean_html_tags(item.findtext("사건명", "사건명 없음"))
@@ -258,9 +258,9 @@ category = st.sidebar.radio(
 # 카테고리 맵핑
 target_map = {
     "국가법령": "elaw",
-    "지방자치조례": "eordin",
-    "행정규칙(고시/예규)": "eadmrul",
-    "사법부 판례": "eprec"
+    "지방자치조례": "ordin",
+    "행정규칙(고시/예규)": "admrul",
+    "사법부 판례": "prec"
 }
 
 search_keyword = st.sidebar.text_input("검색 키워드 입력", placeholder="예: 개인정보, 주차장")
