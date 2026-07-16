@@ -423,7 +423,7 @@ with tab_chat:
                     }
                     
                     try:
-                        res = requests.post(f"{FACTCHAT_BASE_URL}/chat/completions", headers=headers, json=payload, verify=False, timeout=30)
+                        res = requests.post(f"{FACTCHAT_BASE_URL}/chat/completions", headers=headers, json=payload, verify=False, timeout=120)
                         res.raise_for_status()
                         answer = res.json()['choices'][0]['message']['content']
                         
