@@ -96,19 +96,19 @@ def search_law_api(query: str, search_target: str) -> list:
                     "type": "law"
                 })
         elif search_target == "ordin":
-            for item in root.findall(".//main"):
+            for item in root.findall(".//law"):
                 results.append({
-                    "title": clean_html_tags(item.findtext("자치법규명한글", "이름 없음")),
+                    "title": clean_html_tags(item.findtext("자치법규명", "이름 없음")),
                     "mst": item.findtext("자치법규일련번호", ""),
-                    "detail": f"{clean_html_tags(item.findtext('지자체명', '지자체 미상'))} | 공포번호: {item.findtext('공포번호', '')}",
+                    "detail": f"{clean_html_tags(item.findtext('지자체기관명', '지자체 미상'))} | 공포일: {item.findtext('공포일자', '')}",
                     "type": "ordinance"
                 })
         elif search_target == "admrul":
-            for item in root.findall(".//admRul"):
+            for item in root.findall(".//admrul"):
                 results.append({
                     "title": clean_html_tags(item.findtext("행정규칙명", "이름 없음")),
                     "mst": item.findtext("행정규칙일련번호", ""),
-                    "detail": f"{clean_html_tags(item.findtext('소관부처명', ''))} | 고시번호: {item.findtext('행정규칙번호', '')}",
+                    "detail": f"{clean_html_tags(item.findtext('행정규칙종류', ''))} | 발령일자: {item.findtext('발령일자', '')}",
                     "type": "admrul"
                 })
         elif search_target == "prec":
