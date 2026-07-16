@@ -491,7 +491,7 @@ with tab_chat:
                 st.warning(warn_msg)
                 st.session_state.chat_history.append({"role": "assistant", "content": warn_msg})
             else:
-                with st.spinner("장착된 실시간 법률 조항 및 판례 요지를 교차 분석 중..."):
+                with st.spinner("🤖 AI 행정 자문관이 조문과 판례를 교차 분석하여 전문 의견서를 작성 중입니다. (최대 1~2분 소요)..."):
                     # 공무원용 고도화 전문 프롬프팅
                     system_prompt = f"""
                     당신은 대한민국 최고의 공공 행정 전문 비서이자 정부 법률 자문관이다.
