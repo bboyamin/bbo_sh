@@ -339,11 +339,9 @@ if current_query:
                 detail = item["detail"]
                 dtype = item["type"]
                 
-                # [해결책] 위젯이 렌더링되기 직전 시점에 세션 상태값을 selected_docs 실시간 정보로 사전 덮어씀
-                # 이 시점은 위젯 인스턴스화 이전이므로 StreamlitAPIException 예외가 절대로 발생하지 않고 완벽하게 동기화됩니다.
+                # 체크박스 상태 바인딩
                 is_selected = mst in st.session_state.selected_docs
                 cb_key = f"cb_widget_{mst}"
-                st.session_state[cb_key] = is_selected
                 
                 cb = st.checkbox(
                     f"{title}\n({detail})",
@@ -399,11 +397,16 @@ if st.session_state.selected_docs:
         if col_btn.button("❌", key=f"del_{mst}", help="장착 제외"):
             # 1. 지식베이스에서 즉시 제외
             st.session_state.selected_docs.pop(mst, None)
-            # 2. 화면 리런을 통해 st.checkbox value 연동 해제 (직접 cb_ key를 조작하지 않아 에러 방지!)
+            # 2. 체크박스 위젯의 세션 상태 키 자체를 완전히 메모리에서 제거하여 잔상 롤백 방지
+            st.session_state.pop(f"cb_widget_{mst}", None)
             st.rerun()
         
     st.sidebar.write("")
     if st.sidebar.button("🗑️ 장착된 법령 전체 초기화", use_container_width=True):
+        # 전체 초기화 시에도 모든 활성 체크박스의 위젯 세션 키를 완전히 삭제하여 잔상 롤백 방지
+        for k in list(st.session_state.keys()):
+            if k.startswith("cb_widget_"):
+                st.session_state.pop(k, None)
         st.session_state.selected_docs = {}
         st.rerun()
 else:
