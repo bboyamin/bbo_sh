@@ -20,6 +20,20 @@ FACTCHAT_BASE_URL = os.getenv("FACTCHAT_BASE_URL") or "https://factchat-cloud.mi
 # CSS 스틸-그레이 & 오피스 그린 관공서 특화 프리미엄 테마 주입
 st.markdown("""
 <style>
+    /* 스트림릿 기본 상단 헤더 흰색 바 제거 */
+    [data-testid="stHeader"] {
+        background-color: transparent !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        height: 0px !important;
+        min-height: 0px !important;
+        display: none !important;
+    }
+    .block-container {
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
+    }
     .stApp {
         background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
         font-family: 'Noto Sans KR', sans-serif;
@@ -30,12 +44,7 @@ st.markdown("""
         -webkit-text-fill-color: transparent;
         font-weight: 800;
         font-size: 2.2rem;
-        margin-bottom: 0.1rem;
-    }
-    .brand-subtitle {
-        color: #4b5563;
-        font-size: 1.0rem;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.0rem;
     }
     .system-status {
         padding: 4px 10px;
@@ -421,7 +430,6 @@ manual_text = st.sidebar.text_area(
 # 4. 메인 화면 렌더링 및 RAG 융합 질의
 # ==========================================
 st.markdown('<div class="brand-title">🏛️ 행정 자문관 - 법제처 Direct Open API RAG</div>', unsafe_allow_html=True)
-st.markdown('<div class="brand-subtitle">임시 MCP 레이어를 제거하고 법제처 API에 직접 질의하여 조문과 판례를 100% 무오류로 연동하는 공무원용 지능형 자문 비서입니다.</div>', unsafe_allow_html=True)
 
 check_system_health()
 
