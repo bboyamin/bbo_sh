@@ -472,24 +472,24 @@ with tab_chat:
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
         
-    # 대화 이력 출력
+    # 1. 누적된 대화 이력을 화면 상단에 순차적으로 렌더링
     for msg in st.session_state.chat_history:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
             
-    # 사용자 질문 받기
+    # 2. 사용자 질문 입력창 (대화 이력 하단 고정)
     if prompt := st.chat_input("장착된 법률/조례를 바탕으로 AI 행정 자문관에게 질문해 보세요..."):
+        # 사용자의 질문 즉시 화면 렌더링 및 이력 누적
         st.session_state.chat_history.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
             
+        # 어시스턴트 실시간 RAG 자문 분석 및 답변 생성
         with st.chat_message("assistant"):
             if not context_str.strip():
-                st.warning("⚠️ 현재 장착된 법규가 없습니다. 사이드바에서 법규를 장착하시면 이를 토대로 법적 근거가 포함된 답변을 해 드립니다.")
-                st.session_state.chat_history.append({
-                    "role": "assistant",
-                    "content": "⚠️ 현재 장착된 법규가 없습니다. 사이드바에서 법규를 장착하시면 이를 토대로 법적 근거가 포함된 답변을 해 드립니다."
-                })
+                warn_msg = "⚠️ 현재 장착된 법규가 없습니다. 사이드바에서 법규를 장착하시면 이를 토대로 법적 근거가 포함된 답변을 해 드립니다."
+                st.warning(warn_msg)
+                st.session_state.chat_history.append({"role": "assistant", "content": warn_msg})
             else:
                 with st.spinner("장착된 실시간 법률 조항 및 판례 요지를 교차 분석 중..."):
                     # 공무원용 고도화 전문 프롬프팅
@@ -510,7 +510,7 @@ with tab_chat:
                     """
                     
                     api_messages = [{"role": "system", "content": system_prompt}]
-                    # 대화 맥락 압축 전달
+                    # 최근 대화 맥락 주입
                     for m in st.session_state.chat_history[-5:]:
                         api_messages.append({"role": m["role"], "content": m["content"]})
                         
@@ -544,3 +544,6 @@ with tab_chat:
                         err_txt = f"⚠️ FactChat API 연동에 실패했습니다. (사유: {e})"
                         st.error(err_txt)
                         st.session_state.chat_history.append({"role": "assistant", "content": err_txt})
+        
+        # [핵심] 답변 누적 직후 즉시 리런하여 스크롤 위치 및 질문창 위치를 완벽하게 정돈
+        st.rerun()
