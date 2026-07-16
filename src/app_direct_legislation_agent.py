@@ -472,6 +472,23 @@ with tab_chat:
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
         
+    def scroll_to_bottom():
+        # 스트림릿 최외각 스크롤을 최하단으로 당기는 자바스크립트 주입
+        js = """
+        <script>
+            function scrollToBottom() {
+                const scrollContainers = window.parent.document.querySelectorAll("section.main");
+                scrollContainers.forEach(container => {
+                    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+                });
+            }
+            scrollToBottom();
+            setTimeout(scrollToBottom, 300);
+            setTimeout(scrollToBottom, 800);
+        </script>
+        """
+        st.components.v1.html(js, height=0)
+        
     # 1. 누적된 대화 이력을 화면 상단에 순차적으로 렌더링
     for msg in st.session_state.chat_history:
         with st.chat_message(msg["role"]):
@@ -483,9 +500,12 @@ with tab_chat:
         st.session_state.chat_history.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
+        # 질문 전송 즉시 스크롤을 맨 아래로 당겨 로딩 스피너 확보
+        scroll_to_bottom()
             
         # 어시스턴트 실시간 RAG 자문 분석 및 답변 생성
         with st.chat_message("assistant"):
+            scroll_to_bottom() # AI 답변 시작 시점에도 스크롤 재정돈
             if not context_str.strip():
                 warn_msg = "⚠️ 현재 장착된 법규가 없습니다. 사이드바에서 법규를 장착하시면 이를 토대로 법적 근거가 포함된 답변을 해 드립니다."
                 st.warning(warn_msg)
