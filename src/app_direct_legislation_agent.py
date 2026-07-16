@@ -129,25 +129,27 @@ def search_law_api(query: str, search_target: str) -> list:
 @st.cache_data(show_spinner=False)
 def fetch_body_api(mst: str, doc_type: str) -> str:
     """
-    특정 MST 코드를 기반으로 법제처에서 본문 XML을 수집 및 핵심 조항 파싱 정제
+    특정 MST/ID 코드를 기반으로 법제처에서 본문 XML을 수집 및 핵심 조항 파싱 정제
     doc_type: 'law', 'ordinance', 'admrul', 'prec'
     """
-    # 문서 종류별 API 엔드포인트 매핑
-    endpoints = {
-        "law": ("http://www.law.go.kr/DRF/lawService.do", "law"),
-        "ordinance": ("http://www.law.go.kr/DRF/ordinanceService.do", "ordinance"),
-        "admrul": ("http://www.law.go.kr/DRF/admRulService.do", "admrul"),
-        "prec": ("http://www.law.go.kr/DRF/precService.do", "prec")
+    url = "http://www.law.go.kr/DRF/lawService.do"
+    
+    # 4대 카테고리별 올바른 파라미터 매핑 (교차 검증 성공 규격)
+    params_map = {
+        "law": {"target": "law", "key": "MST"},
+        "ordinance": {"target": "ordin", "key": "MST"},
+        "admrul": {"target": "admrul", "key": "ID"},
+        "prec": {"target": "prec", "key": "ID"}
     }
     
-    if doc_type not in endpoints:
+    if doc_type not in params_map:
         return "[오류] 올바르지 않은 문서 타입"
         
-    url, target_param = endpoints[doc_type]
+    cfg = params_map[doc_type]
     params = {
         "OC": LAW_OC,
-        "target": target_param,
-        "MST": mst,
+        "target": cfg["target"],
+        cfg["key"]: mst,
         "type": "XML"
     }
     
@@ -157,9 +159,10 @@ def fetch_body_api(mst: str, doc_type: str) -> str:
         root = ET.fromstring(res.content)
         
         body_text = ""
-        # 1. 일반 법령/조례 파싱
+        
+        # 1. 국가법령 (law) 및 자치조례 (ordinance) 파싱
         if doc_type in ["law", "ordinance"]:
-            title = root.findtext(".//법령명한글") or root.findtext(".//자치법규명한글") or "제명 미상"
+            title = root.findtext(".//법령명한글") or root.findtext(".//자치법규명") or "제명 미상"
             body_text += f"=== {title} ===\n"
             for node in root.findall(".//조문단위"):
                 jo_title = node.findtext("조문내용", "").strip()
@@ -180,47 +183,43 @@ def fetch_body_api(mst: str, doc_type: str) -> str:
                                         mok_text = mok.findtext("목내용", "").strip()
                                         if mok_text:
                                             body_text += f"      {mok_text}\n"
-                    # 조문 직속 호/목이 있는 특이 케이스 보완
+                    # 조문 직속 호/목이 있는 케이스 보완
                     for ho in node.findall("호"):
                         ho_text = ho.findtext("호내용", "").strip()
                         if ho_text:
                             body_text += f"  {ho_text}\n"
                             
-        # 2. 행정규칙 파싱
+        # 2. 행정규칙 (admrul) 파싱
         elif doc_type == "admrul":
             title = root.findtext(".//행정규칙명") or "행정규칙 제명 미상"
             body_text += f"=== {title} ===\n"
-            # 행정규칙도 동일하게 조문 및 항/호/목의 구조화된 본문을 무손실로 전개
-            for node in root.findall(".//조문단위"):
-                jo_title = node.findtext("조문내용", "").strip()
-                if jo_title:
-                    body_text += f"{jo_title}\n"
-                    for hang in node.findall("항"):
-                        hang_text = hang.findtext("항내용", "").strip()
-                        if hang_text:
-                            body_text += f"  {hang_text}\n"
-                            for ho in hang.findall("호"):
-                                ho_text = ho.findtext("호내용", "").strip()
-                                if ho_text:
-                                    body_text += f"    {ho_text}\n"
-            if len(body_text) < 150:
-                main_body = root.findtext(".//본문내용")
-                if main_body:
-                    body_text += main_body.strip()
+            # 행정규칙은 조문단위 태그가 없고, 직접 조문내용 목록이 제공됨
+            for node in root.findall(".//조문내용"):
+                txt = node.text.strip() if node.text else ""
+                if txt:
+                    body_text += f"{txt}\n"
+            
+            # 부칙 내용 보완
+            for node in root.findall(".//부칙내용"):
+                txt = node.text.strip() if node.text else ""
+                if txt:
+                    body_text += f"\n[부칙]\n{txt}\n"
                     
-        # 3. 판례 파싱
+        # 3. 판례 (prec) 파싱 (PrecService XML 파싱)
         elif doc_type == "prec":
-            case_no = root.findtext(".//사건번호") or ""
-            case_name = root.findtext(".//사건명") or ""
+            case_no = root.findtext(".//사건번호") or "사건번호 미상"
+            case_name = root.findtext(".//사건명") or "사건명 없음"
             body_text += f"=== 판례: [{case_no}] {case_name} ===\n"
             
             p_사항 = root.findtext(".//판시사항")
             p_요지 = root.findtext(".//판결요지")
-            p_전문 = root.findtext(".//판결전문")
+            p_조문 = root.findtext(".//참조조문")
+            p_내용 = root.findtext(".//판례내용")
             
-            if p_사항: body_text += f"[판시사항]\n{p_사항.strip()}\n\n"
-            if p_요지: body_text += f"[판결요지]\n{p_요지.strip()}\n\n"
-            if p_전문: body_text += f"[판결전문]\n{p_전문.strip()[:3000]}\n" # 너무 길 경우 자름
+            if p_사항: body_text += f"[판시사항]\n{clean_html_tags(p_사항)}\n\n"
+            if p_요지: body_text += f"[판결요지]\n{clean_html_tags(p_요지)}\n\n"
+            if p_조문: body_text += f"[참조조문]\n{clean_html_tags(p_조문)}\n\n"
+            if p_내용: body_text += f"[판결전문]\n{clean_html_tags(p_내용)[:4000]}\n" # 판례 전문 포함
             
         return body_text if body_text.strip() else "[본문 데이터 없음]"
     except Exception as e:
