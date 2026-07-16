@@ -363,9 +363,27 @@ st.sidebar.markdown(f"### 🧳 장착된 법무 지식베이스 ({len(st.session
 if st.session_state.selected_docs:
     for mst, doc in list(st.session_state.selected_docs.items()):
         dtype_badge = "🏛️" if doc["type"] == "law" else "🏡" if doc["type"] == "ordinance" else "📜" if doc["type"] == "admrul" else "⚖️"
-        st.sidebar.caption(f"{dtype_badge} {doc['title']}")
         
+        # 개별 선택 삭제가 가능하도록 컬럼 배치
+        col_item, col_btn = st.sidebar.columns([8, 2])
+        col_item.caption(f"{dtype_badge} {doc['title']}")
+        
+        # 삭제 버튼 클릭 시 처리
+        if col_btn.button("❌", key=f"del_{mst}", help="장착 제외"):
+            # 1. 지식베이스에서 삭제
+            st.session_state.selected_docs.pop(mst, None)
+            # 2. 화면 체크박스 바인딩 상태도 강제 해제 (체크박스 키 동기화 리셋)
+            cb_key = f"cb_{mst}"
+            if cb_key in st.session_state:
+                st.session_state[cb_key] = False
+            st.rerun()
+        
+    st.sidebar.write("")
     if st.sidebar.button("🗑️ 장착된 법령 전체 초기화", use_container_width=True):
+        # 전체 초기화 시에도 모든 활성 체크박스의 세션 바인딩을 강제 리셋하여 오작동 차단
+        for k in list(st.session_state.keys()):
+            if k.startswith("cb_"):
+                st.session_state[k] = False
         st.session_state.selected_docs = {}
         st.rerun()
 else:
