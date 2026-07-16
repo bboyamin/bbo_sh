@@ -20,18 +20,34 @@ FACTCHAT_BASE_URL = os.getenv("FACTCHAT_BASE_URL") or "https://factchat-cloud.mi
 # CSS 스틸-그레이 & 오피스 그린 관공서 특화 프리미엄 테마 주입
 st.markdown("""
 <style>
-    /* 스트림릿 기본 상단 헤더 흰색 바 제거 */
+    /* 스트림릿 기본 상단 헤더 흰색 바 제거 (투명화하여 펼침 화살표는 노출) */
     [data-testid="stHeader"] {
         background-color: transparent !important;
         background: transparent !important;
         border: none !important;
         box-shadow: none !important;
-        height: 0px !important;
-        min-height: 0px !important;
-        display: none !important;
     }
+    
+    /* 사이드바가 접혔을 때의 펼침(>) 버튼 복원 및 오피스 블루 원형 스킨 적용 */
+    button[data-testid="collapsedSidebarCodegen"], 
+    div[data-testid="collapsedSidebarCodegen"] button,
+    button:has(svg[viewBox="0 0 24 24"]) {
+        background-color: #1e3a8a !important; /* 진파랑 배경 */
+        color: #ffffff !important; /* 흰색 화살표 */
+        fill: #ffffff !important;
+        border-radius: 50% !important;
+        box-shadow: 0 4px 10px rgba(30, 58, 138, 0.3) !important;
+        z-index: 999999 !important;
+        transition: transform 0.2s ease, background-color 0.2s ease !important;
+    }
+    button[data-testid="collapsedSidebarCodegen"]:hover,
+    div[data-testid="collapsedSidebarCodegen"] button:hover {
+        background-color: #0d9488 !important; /* 호버 시 틸-그린 */
+        transform: scale(1.15) !important;
+    }
+    
     .block-container {
-        padding-top: 2rem !important;
+        padding-top: 4.5rem !important; /* 헤더 투명화 복원에 맞춰 컨텐츠 영역 마진 최적화 */
         padding-bottom: 2rem !important;
     }
     .stApp {
@@ -63,6 +79,36 @@ st.markdown("""
         background-color: #fee2e2;
         color: #991b1b;
         border: 1px solid #ef4444;
+    }
+    
+    /* [지적이고 차별화된 오피스 슬레이트 사이드바 테마] */
+    section[data-testid="stSidebar"] {
+        background-color: #f1f5f9 !important; /* 차분한 비즈니스 딤 그레이 */
+        border-right: 1px solid #e2e8f0 !important;
+    }
+    
+    /* 사이드바 메뉴 헤더 가독성 격상 */
+    section[data-testid="stSidebar"] h3 {
+        color: #1e3a8a !important;
+        font-weight: 800 !important;
+        border-bottom: 2px solid #cbd5e1 !important;
+        padding-bottom: 6px !important;
+        margin-top: 10px !important;
+    }
+    
+    /* 사이드바 인풋 및 라디오 박스 플레이트 디자인 */
+    section[data-testid="stSidebar"] .stTextInput input {
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        background-color: #ffffff !important;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.03) !important;
+    }
+    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] {
+        background-color: #ffffff !important;
+        padding: 12px !important;
+        border-radius: 8px !important;
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
     }
     
     /* 사이드바 개별 삭제 ❌ 버튼 미니멀 플랫 스타일링 */
