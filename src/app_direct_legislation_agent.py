@@ -287,6 +287,14 @@ if st.session_state.selected_docs:
 else:
     st.sidebar.info("사이드바 검색창에서 법령을 검색한 후 체크박스를 선택하여 에이전트에 장착해 주세요.")
 
+# API 미색인 최신 법령 보조용 수동 입력창
+st.sidebar.markdown("---")
+manual_text = st.sidebar.text_area(
+    "📝 미검색/최신 조문 직접 추가",
+    placeholder="법제처 API에 아직 반영되지 않은 신규 법률이나 별도 행정 지침이 있다면 여기에 본문을 복사해서 붙여넣어 주시면 RAG 지식베이스에 즉시 함께 반영됩니다.",
+    height=180
+)
+
 # ==========================================
 # 4. 메인 화면 렌더링 및 RAG 융합 질의
 # ==========================================
@@ -306,15 +314,27 @@ if st.session_state.selected_docs:
             doc_body = fetch_body_api(mst, doc["type"])
             context_str += f"\n\n{doc_body}\n"
 
+if manual_text.strip():
+    context_str += f"\n\n=== [수동 추가 참고 지식] ===\n{manual_text.strip()}\n"
+
 # 탭 2: 원문 확인 패널
 with tab_docs:
+    has_docs = False
     if st.session_state.selected_docs:
+        has_docs = True
         st.markdown("### 🔎 장착된 조문/판례의 원문 팩트 대조")
         for mst, doc in st.session_state.selected_docs.items():
             with st.expander(f"📄 {doc['title']} (MST: {mst}) 원문 확인"):
                 st.text_area("상세 조문", value=fetch_body_api(mst, doc["type"]), height=300, key=f"viewer_{mst}")
-    else:
-        st.info("현재 장착된 법령이 없습니다. 사이드바에서 법규를 장착하시면 실시간 원문이 여기에 표출됩니다.")
+                
+    if manual_text.strip():
+        has_docs = True
+        st.markdown("### 📝 수동으로 직접 추가한 조문 팩트 대조")
+        with st.expander("📄 직접 추가한 조문 본문"):
+            st.text_area("상세 본문", value=manual_text.strip(), height=250, key="viewer_manual")
+            
+    if not has_docs:
+        st.info("현재 장착된 법령이 없습니다. 사이드바에서 법규를 장착하거나 최신 조문을 수동 추가하시면 실시간 원문이 여기에 표출됩니다.")
 
 # 탭 1: AI 챗봇 상담
 with tab_chat:
