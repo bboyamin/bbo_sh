@@ -55,6 +55,29 @@ st.markdown("""
         color: #991b1b;
         border: 1px solid #ef4444;
     }
+    
+    /* 사이드바 개별 삭제 ❌ 버튼 미니멀 플랫 스타일링 */
+    div[data-testid="stSidebar"] div[data-testid="stColumn"] button {
+        border: none !important;
+        background-color: transparent !important;
+        color: #ef4444 !important;
+        padding: 0 !important;
+        margin-top: 4px !important;
+        line-height: 1 !important;
+        font-size: 14px !important;
+        box-shadow: none !important;
+        transition: transform 0.2s ease, color 0.2s ease !important;
+        min-height: auto !important;
+        height: auto !important;
+    }
+    div[data-testid="stSidebar"] div[data-testid="stColumn"] button:hover {
+        color: #b91c1c !important;
+        background-color: transparent !important;
+        transform: scale(1.2);
+    }
+    div[data-testid="stSidebar"] div[data-testid="stColumn"] button:active {
+        background-color: transparent !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -370,20 +393,13 @@ if st.session_state.selected_docs:
         
         # 삭제 버튼 클릭 시 처리
         if col_btn.button("❌", key=f"del_{mst}", help="장착 제외"):
-            # 1. 지식베이스에서 삭제
+            # 1. 지식베이스에서 즉시 제외
             st.session_state.selected_docs.pop(mst, None)
-            # 2. 화면 체크박스 바인딩 상태도 강제 해제 (체크박스 키 동기화 리셋)
-            cb_key = f"cb_{mst}"
-            if cb_key in st.session_state:
-                st.session_state[cb_key] = False
+            # 2. 화면 리런을 통해 st.checkbox value 연동 해제 (직접 cb_ key를 조작하지 않아 에러 방지!)
             st.rerun()
         
     st.sidebar.write("")
     if st.sidebar.button("🗑️ 장착된 법령 전체 초기화", use_container_width=True):
-        # 전체 초기화 시에도 모든 활성 체크박스의 세션 바인딩을 강제 리셋하여 오작동 차단
-        for k in list(st.session_state.keys()):
-            if k.startswith("cb_"):
-                st.session_state[k] = False
         st.session_state.selected_docs = {}
         st.rerun()
 else:
