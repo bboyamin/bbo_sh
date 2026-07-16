@@ -165,17 +165,45 @@ def fetch_body_api(mst: str, doc_type: str) -> str:
                 jo_title = node.findtext("조문내용", "").strip()
                 if jo_title:
                     body_text += f"{jo_title}\n"
-                    
+                    # 하부 항(Paragraph) 수집
+                    for hang in node.findall("항"):
+                        hang_text = hang.findtext("항내용", "").strip()
+                        if hang_text:
+                            body_text += f"  {hang_text}\n"
+                            # 항 하부 호(Sub-paragraph) 수집
+                            for ho in hang.findall("호"):
+                                ho_text = ho.findtext("호내용", "").strip()
+                                if ho_text:
+                                    body_text += f"    {ho_text}\n"
+                                    # 호 하부 목 수집
+                                    for mok in ho.findall("목"):
+                                        mok_text = mok.findtext("목내용", "").strip()
+                                        if mok_text:
+                                            body_text += f"      {mok_text}\n"
+                    # 조문 직속 호/목이 있는 특이 케이스 보완
+                    for ho in node.findall("호"):
+                        ho_text = ho.findtext("호내용", "").strip()
+                        if ho_text:
+                            body_text += f"  {ho_text}\n"
+                            
         # 2. 행정규칙 파싱
         elif doc_type == "admrul":
             title = root.findtext(".//행정규칙명") or "행정규칙 제명 미상"
             body_text += f"=== {title} ===\n"
-            # 행정규칙은 조문단위 혹은 본문 구조 활용
+            # 행정규칙도 동일하게 조문 및 항/호/목의 구조화된 본문을 무손실로 전개
             for node in root.findall(".//조문단위"):
                 jo_title = node.findtext("조문내용", "").strip()
                 if jo_title:
                     body_text += f"{jo_title}\n"
-            if len(body_text) < 100:
+                    for hang in node.findall("항"):
+                        hang_text = hang.findtext("항내용", "").strip()
+                        if hang_text:
+                            body_text += f"  {hang_text}\n"
+                            for ho in hang.findall("호"):
+                                ho_text = ho.findtext("호내용", "").strip()
+                                if ho_text:
+                                    body_text += f"    {ho_text}\n"
+            if len(body_text) < 150:
                 main_body = root.findtext(".//본문내용")
                 if main_body:
                     body_text += main_body.strip()
