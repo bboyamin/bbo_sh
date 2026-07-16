@@ -160,9 +160,9 @@ def fetch_body_api(mst: str, doc_type: str) -> str:
         
         body_text = ""
         
-        # 1. 국가법령 (law) 및 자치조례 (ordinance) 파싱
-        if doc_type in ["law", "ordinance"]:
-            title = root.findtext(".//법령명한글") or root.findtext(".//자치법규명") or "제명 미상"
+        # 1. 국가법령 (law) 파싱
+        if doc_type == "law":
+            title = root.findtext(".//법령명한글") or "법령 제명 미상"
             body_text += f"=== {title} ===\n"
             for node in root.findall(".//조문단위"):
                 jo_title = node.findtext("조문내용", "").strip()
@@ -188,6 +188,25 @@ def fetch_body_api(mst: str, doc_type: str) -> str:
                         ho_text = ho.findtext("호내용", "").strip()
                         if ho_text:
                             body_text += f"  {ho_text}\n"
+                            
+        # 1-2. 자치조례 (ordinance) 파싱
+        elif doc_type == "ordinance":
+            title = root.findtext(".//자치법규명") or "조례 제명 미상"
+            body_text += f"=== {title} ===\n"
+            # 조례의 실제 개별 조문 노드는 <조> 이며, <조제목>과 <조내용>을 담고 있음
+            for node in root.findall(".//조"):
+                jo_title = node.findtext("조제목", "").strip()
+                jo_content = node.findtext("조내용", "").strip()
+                if jo_title:
+                    body_text += f"{jo_title}\n"
+                if jo_content:
+                    body_text += f"{jo_content}\n"
+            
+            # 부칙 내용 보완
+            for node in root.findall(".//부칙내용"):
+                txt = node.text.strip() if node.text else ""
+                if txt:
+                    body_text += f"\n[부칙]\n{txt}\n"
                             
         # 2. 행정규칙 (admrul) 파싱
         elif doc_type == "admrul":
