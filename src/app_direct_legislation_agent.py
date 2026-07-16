@@ -62,6 +62,12 @@ st.markdown("""
 # 1. 법제처 HTTP Open API 연계 모듈 (Direct REST Client)
 # ==========================================
 @st.cache_data(show_spinner=False)
+def clean_html_tags(text: str) -> str:
+    if not text:
+        return ""
+    # 모든 HTML 태그(<...>)를 제거하고 공백을 정돈합니다.
+    return re.sub(r'<[^>]*>', '', text).strip()
+
 def search_law_api(query: str, search_target: str) -> list:
     """
     search_target: 'elaw' (국가법령), 'eordin' (자치법규), 'eadmrul' (행정규칙), 'eprec' (판례)
@@ -84,33 +90,35 @@ def search_law_api(query: str, search_target: str) -> list:
         if search_target == "elaw":
             for item in root.findall(".//law"):
                 results.append({
-                    "title": item.findtext("법령명한글", "이름 없음"),
+                    "title": clean_html_tags(item.findtext("법령명한글", "이름 없음")),
                     "mst": item.findtext("법령일련번호", ""),
-                    "detail": f"{item.findtext('법령구분명', '')} | 공포일: {item.findtext('공포일자', '')}",
+                    "detail": f"{clean_html_tags(item.findtext('법령구분명', ''))} | 공포일: {item.findtext('공포일자', '')}",
                     "type": "law"
                 })
         elif search_target == "eordin":
             for item in root.findall(".//main"):
                 results.append({
-                    "title": item.findtext("자치법규명한글", "이름 없음"),
+                    "title": clean_html_tags(item.findtext("자치법규명한글", "이름 없음")),
                     "mst": item.findtext("자치법규일련번호", ""),
-                    "detail": f"{item.findtext('지자체명', '지자체 미상')} | 공포번호: {item.findtext('공포번호', '')}",
+                    "detail": f"{clean_html_tags(item.findtext('지자체명', '지자체 미상'))} | 공포번호: {item.findtext('공포번호', '')}",
                     "type": "ordinance"
                 })
         elif search_target == "eadmrul":
             for item in root.findall(".//admRul"):
                 results.append({
-                    "title": item.findtext("행정규칙명", "이름 없음"),
+                    "title": clean_html_tags(item.findtext("행정규칙명", "이름 없음")),
                     "mst": item.findtext("행정규칙일련번호", ""),
-                    "detail": f"{item.findtext('소관부처명', '')} | 고시번호: {item.findtext('행정규칙번호', '')}",
+                    "detail": f"{clean_html_tags(item.findtext('소관부처명', ''))} | 고시번호: {item.findtext('행정규칙번호', '')}",
                     "type": "admrul"
                 })
         elif search_target == "eprec":
             for item in root.findall(".//prec"):
+                raw_case_no = clean_html_tags(item.findtext("사건번호", "번호 미상"))
+                raw_case_name = clean_html_tags(item.findtext("사건명", "사건명 없음"))
                 results.append({
-                    "title": f"[{item.findtext('사건번호', '번호 미상')}] {item.findtext('사건명', '사건명 없음')}",
+                    "title": f"[{raw_case_no}] {raw_case_name}",
                     "mst": item.findtext("판례일련번호", ""),
-                    "detail": f"{item.findtext('법원명', '')} | 선고일자: {item.findtext('선고일자', '')}",
+                    "detail": f"{clean_html_tags(item.findtext('법원명', ''))} | 선고일자: {item.findtext('선고일자', '')}",
                     "type": "prec"
                 })
         return [r for r in results if r["mst"]]
