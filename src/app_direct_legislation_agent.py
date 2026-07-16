@@ -339,15 +339,19 @@ if current_query:
                 detail = item["detail"]
                 dtype = item["type"]
                 
-                # 체크박스 상태 바인딩
+                # [해결책] 위젯이 렌더링되기 직전 시점에 세션 상태값을 selected_docs 실시간 정보로 사전 덮어씀
+                # 이 시점은 위젯 인스턴스화 이전이므로 StreamlitAPIException 예외가 절대로 발생하지 않고 완벽하게 동기화됩니다.
                 is_selected = mst in st.session_state.selected_docs
+                cb_key = f"cb_widget_{mst}"
+                st.session_state[cb_key] = is_selected
+                
                 cb = st.checkbox(
                     f"{title}\n({detail})",
                     value=is_selected,
-                    key=f"cb_{mst}"
+                    key=cb_key
                 )
                 
-                # 체크박스 상태 변화에 따라 세션에 적재/삭제
+                # 체크박스 상태 변화에 따라 세션에 즉시 반영
                 if cb and not is_selected:
                     st.session_state.selected_docs[mst] = {"title": title, "type": dtype}
                     st.rerun()
