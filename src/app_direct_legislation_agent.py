@@ -207,7 +207,7 @@ def search_law_api(query: str, search_target: str, page: int = 1) -> list:
     """
     search_target: 'elaw' (국가법령), 'ordin' (자치법규), 'admrul' (행정규칙), 'prec' (판례)
     """
-    url = "http://www.law.go.kr/DRF/lawSearch.do"
+    url = "https://www.law.go.kr/DRF/lawSearch.do"
     params = {
         "OC": LAW_OC,
         "target": search_target,
@@ -218,7 +218,7 @@ def search_law_api(query: str, search_target: str, page: int = 1) -> list:
     }
     
     try:
-        res = requests.get(url, params=params, verify=False, timeout=8)
+        res = requests.get(url, params=params, verify=False, timeout=(15, 30))
         res.raise_for_status()
         root = ET.fromstring(res.content)
         
@@ -269,7 +269,7 @@ def fetch_body_api(mst: str, doc_type: str) -> str:
     특정 MST/ID 코드를 기반으로 법제처에서 본문 XML을 수집 및 핵심 조항 파싱 정제
     doc_type: 'law', 'ordinance', 'admrul', 'prec'
     """
-    url = "http://www.law.go.kr/DRF/lawService.do"
+    url = "https://www.law.go.kr/DRF/lawService.do"
     
     # 4대 카테고리별 올바른 파라미터 매핑 (교차 검증 성공 규격)
     params_map = {
@@ -291,7 +291,7 @@ def fetch_body_api(mst: str, doc_type: str) -> str:
     }
     
     try:
-        res = requests.get(url, params=params, verify=False, timeout=10)
+        res = requests.get(url, params=params, verify=False, timeout=(15, 30))
         res.raise_for_status()
         root = ET.fromstring(res.content)
         
