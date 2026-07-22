@@ -13,9 +13,17 @@ st.set_page_config(page_title="행정 자문관 - 법제처 Direct Open API RAG"
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 load_dotenv()
 
-LAW_OC = os.getenv("LAW_OC") or "a11223344556677"
-FACTCHAT_API_KEY = os.getenv("FACTCHAT_API_KEY")
-FACTCHAT_BASE_URL = os.getenv("FACTCHAT_BASE_URL") or "https://factchat-cloud.mindlogic.ai/v1/gateway"
+def get_secret(key_name, default_val=""):
+    try:
+        if hasattr(st, "secrets") and key_name in st.secrets:
+            return st.secrets[key_name]
+    except Exception:
+        pass
+    return os.getenv(key_name) or default_val
+
+LAW_OC = get_secret("LAW_OC", "a11223344556677")
+FACTCHAT_API_KEY = get_secret("FACTCHAT_API_KEY")
+FACTCHAT_BASE_URL = get_secret("FACTCHAT_BASE_URL", "https://factchat-cloud.mindlogic.ai/v1/gateway")
 
 # CSS 스틸-그레이 & 오피스 그린 관공서 특화 프리미엄 테마 주입
 st.markdown("""
