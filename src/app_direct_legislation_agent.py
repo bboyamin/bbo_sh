@@ -187,7 +187,7 @@ def search_law_api(query: str, search_target: str, page: int = 1) -> list:
     """
     search_target: 'elaw' (국가법령), 'ordin' (자치법규), 'admrul' (행정규칙), 'prec' (판례)
     """
-    url = "https://www.law.go.kr/DRF/lawSearch.do"
+    url = "http://www.law.go.kr/DRF/lawSearch.do"
     params = {
         "OC": LAW_OC,
         "target": search_target,
@@ -198,7 +198,7 @@ def search_law_api(query: str, search_target: str, page: int = 1) -> list:
     }
     
     try:
-        res = requests.get(url, params=params, verify=False, timeout=(15, 30))
+        res = requests.get(url, params=params, verify=False, timeout=8)
         res.raise_for_status()
         root = ET.fromstring(res.content)
         
@@ -239,9 +239,6 @@ def search_law_api(query: str, search_target: str, page: int = 1) -> list:
                     "type": "prec"
                 })
         return [r for r in results if r["mst"]]
-    except requests.exceptions.ConnectTimeout:
-        st.sidebar.warning("🚨 **[해외 IP 방화벽 차단 감지]**\n현재 클라우드 배포 주소(해외 AWS IP)는 법제처 공공 보안 정책상 커넥션이 차단됩니다.\n\n👉 **국내 IP(로컬 개발 서버 http://localhost:8506)**에서 접속하시면 차단 없이 0.4초 만에 즉시 가동됩니다.")
-        return []
     except Exception as e:
         st.sidebar.error(f"⚠️ API 통신 실패: {e}")
         return []
@@ -252,7 +249,7 @@ def fetch_body_api(mst: str, doc_type: str) -> str:
     특정 MST/ID 코드를 기반으로 법제처에서 본문 XML을 수집 및 핵심 조항 파싱 정제
     doc_type: 'law', 'ordinance', 'admrul', 'prec'
     """
-    url = "https://www.law.go.kr/DRF/lawService.do"
+    url = "http://www.law.go.kr/DRF/lawService.do"
     
     # 4대 카테고리별 올바른 파라미터 매핑 (교차 검증 성공 규격)
     params_map = {
@@ -274,7 +271,7 @@ def fetch_body_api(mst: str, doc_type: str) -> str:
     }
     
     try:
-        res = requests.get(url, params=params, verify=False, timeout=(15, 30))
+        res = requests.get(url, params=params, verify=False, timeout=10)
         res.raise_for_status()
         root = ET.fromstring(res.content)
         
@@ -361,10 +358,8 @@ def fetch_body_api(mst: str, doc_type: str) -> str:
             if p_내용: body_text += f"[판결전문]\n{clean_html_tags(p_내용)[:4000]}\n" # 판례 전문 포함
             
         return body_text if body_text.strip() else "[본문 데이터 없음]"
-    except requests.exceptions.ConnectTimeout:
-        return "[안내] 해외 클라우드 서버 IP 차단으로 인해 법제처 원문을 가져올 수 없습니다. 국내 IP(로컬 환경 http://localhost:8506)에서 접속해 주세요."
     except Exception as e:
-        return f"[오류] API 수집 실패: {e}"
+        return f"[오류] 본문 로드 실패: {e}"
 
 # ==========================================
 # 2. 시스템 인증 헬스 체크
