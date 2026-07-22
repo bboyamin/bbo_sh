@@ -13,17 +13,29 @@ st.set_page_config(page_title="행정 자문관 - 법제처 Direct Open API RAG"
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 load_dotenv()
 
-def get_secret(key_name, default_val=""):
+def get_secret(key_names, default_val=""):
+    if isinstance(key_names, str):
+        key_names = [key_names]
     try:
-        if hasattr(st, "secrets") and key_name in st.secrets:
-            return st.secrets[key_name]
+        if hasattr(st, "secrets"):
+            for kn in key_names:
+                if kn in st.secrets:
+                    return str(st.secrets[kn]).strip(), "Streamlit Secrets"
+                if kn.lower() in st.secrets:
+                    return str(st.secrets[kn.lower()]).strip(), "Streamlit Secrets"
+                if kn.upper() in st.secrets:
+                    return str(st.secrets[kn.upper()]).strip(), "Streamlit Secrets"
     except Exception:
         pass
-    return os.getenv(key_name) or default_val
+    for kn in key_names:
+        val = os.getenv(kn) or os.getenv(kn.lower()) or os.getenv(kn.upper())
+        if val:
+            return val.strip(), ".env 환경변수"
+    return default_val, "기본 설정"
 
-LAW_OC = get_secret("LAW_OC", "a11223344556677")
-FACTCHAT_API_KEY = get_secret("FACTCHAT_API_KEY")
-FACTCHAT_BASE_URL = get_secret("FACTCHAT_BASE_URL", "https://factchat-cloud.mindlogic.ai/v1/gateway")
+LAW_OC, LAW_OC_SOURCE = get_secret(["LAW_OC", "law_oc"], "a11223344556677")
+FACTCHAT_API_KEY, FC_KEY_SOURCE = get_secret(["FACTCHAT_API_KEY", "FACTCHAT_KEY", "factchat_api_key", "factchat_key"])
+FACTCHAT_BASE_URL, _ = get_secret(["FACTCHAT_BASE_URL", "factchat_base_url"], "https://factchat-cloud.mindlogic.ai/v1/gateway")
 
 # CSS 스틸-그레이 & 오피스 그린 관공서 특화 프리미엄 테마 주입
 st.markdown("""
@@ -378,13 +390,14 @@ def check_system_health():
     # 2. FactChat 연결 검사
     fc_status = bool(FACTCHAT_API_KEY)
     
+    fc_mask = f"...{FACTCHAT_API_KEY[-4:]}" if FACTCHAT_API_KEY and len(FACTCHAT_API_KEY) > 4 else "미설정"
     if law_status and fc_status:
-        st.markdown('<div class="system-status status-ok">🟢 시스템 정상 (법제처 Direct API & FactChat 서버 연동 완료)</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="system-status status-ok">🟢 시스템 정상 (FactChat 키: {fc_mask} / 출처: {FC_KEY_SOURCE})</div>', unsafe_allow_html=True)
     else:
         warn_msg = "⚠️ 시스템 점검 필요:"
         if not law_status: warn_msg += " [법제처 API키 공용 또는 누락]"
         if not fc_status: warn_msg += " [FactChat API키 누락]"
-        st.markdown(f'<div class="system-status status-err">{warn_msg}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="system-status status-err">{warn_msg} (로드 키: {fc_mask} / 출처: {FC_KEY_SOURCE})</div>', unsafe_allow_html=True)
 
 # ==========================================
 # 3. 사이드바 검색 및 장착 엔진
