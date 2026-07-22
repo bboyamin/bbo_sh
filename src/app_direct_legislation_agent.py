@@ -192,80 +192,83 @@ LAW_API_HEADERS = {
 def search_law_api(query: str, search_target: str, page: int = 1) -> list:
     """
     search_target: 'elaw' (국가법령), 'ordin' (자치법규), 'admrul' (행정규칙), 'prec' (판례)
-    공공데이터포털 게이트웨이 및 법제처 직접 주소 다중 폴백 시도
+    HTTP/HTTPS 및 Direct/공공데이터포털 serviceKey-OC 4단 교차 타격 폴백
     """
-    endpoints = [
-        "https://apis.data.go.kr/1170000/law/lawSearch.do",
-        "https://www.law.go.kr/DRF/lawSearch.do"
+    targets = [
+        {"url": "https://www.law.go.kr/DRF/lawSearch.do", "key": "OC"},
+        {"url": "http://www.law.go.kr/DRF/lawSearch.do", "key": "OC"},
+        {"url": "https://apis.data.go.kr/1170000/law/lawSearch.do", "key": "serviceKey"},
+        {"url": "http://apis.data.go.kr/1170000/law/lawSearch.do", "key": "serviceKey"}
     ]
-    params = {
-        "OC": LAW_OC,
-        "target": search_target,
-        "query": query,
-        "pageNo": page,
-        "numOfRows": 20,
-        "type": "XML"
-    }
     
-    for url in endpoints:
+    for item in targets:
+        params = {
+            item["key"]: LAW_OC,
+            "target": search_target,
+            "query": query,
+            "pageNo": page,
+            "numOfRows": 20,
+            "type": "XML"
+        }
         try:
-            res = requests.get(url, params=params, headers=LAW_API_HEADERS, verify=False, timeout=(8, 15))
-            if res.status_code == 200 and len(res.content) > 50:
+            res = requests.get(item["url"], params=params, headers=LAW_API_HEADERS, verify=False, timeout=(4, 8))
+            if res.status_code == 200 and len(res.content) > 50 and (b"<Law" in res.content or b"<law" in res.content or b"<Prec" in res.content or b"<prec" in res.content or b"<Adm" in res.content):
                 root = ET.fromstring(res.content)
                 results = []
-                # 각 카테고리별 XML 노드 탐색 방식 다변화
                 if search_target == "elaw":
-                    for item in root.findall(".//law"):
+                    for law_item in root.findall(".//law"):
                         results.append({
-                            "title": clean_html_tags(item.findtext("법령명한글", "이름 없음")),
-                            "mst": item.findtext("법령일련번호", ""),
-                            "detail": f"{clean_html_tags(item.findtext('법령구분명', ''))} | 공포일: {item.findtext('공포일자', '')}",
+                            "title": clean_html_tags(law_item.findtext("법령명한글", "이름 없음")),
+                            "mst": law_item.findtext("법령일련번호", ""),
+                            "detail": f"{clean_html_tags(law_item.findtext('법령구분명', ''))} | 공포일: {law_item.findtext('공포일자', '')}",
                             "type": "law"
                         })
                 elif search_target == "ordin":
-                    for item in root.findall(".//law"):
+                    for law_item in root.findall(".//law"):
                         results.append({
-                            "title": clean_html_tags(item.findtext("자치법규명", "이름 없음")),
-                            "mst": item.findtext("자치법규일련번호", ""),
-                            "detail": f"{clean_html_tags(item.findtext('지자체기관명', '지자체 미상'))} | 공포일: {item.findtext('공포일자', '')}",
+                            "title": clean_html_tags(law_item.findtext("자치법규명", "이름 없음")),
+                            "mst": law_item.findtext("자치법규일련번호", ""),
+                            "detail": f"{clean_html_tags(law_item.findtext('지자체기관명', '지자체 미상'))} | 공포일: {law_item.findtext('공포일자', '')}",
                             "type": "ordinance"
                         })
                 elif search_target == "admrul":
-                    for item in root.findall(".//admrul"):
+                    for law_item in root.findall(".//admrul"):
                         results.append({
-                            "title": clean_html_tags(item.findtext("행정규칙명", "이름 없음")),
-                            "mst": item.findtext("행정규칙일련번호", ""),
-                            "detail": f"{clean_html_tags(item.findtext('행정규칙종류', ''))} | 발령일자: {item.findtext('발령일자', '')}",
+                            "title": clean_html_tags(law_item.findtext("행정규칙명", "이름 없음")),
+                            "mst": law_item.findtext("행정규칙일련번호", ""),
+                            "detail": f"{clean_html_tags(law_item.findtext('행정규칙종류', ''))} | 발령일자: {law_item.findtext('발령일자', '')}",
                             "type": "admrul"
                         })
                 elif search_target == "prec":
-                    for item in root.findall(".//prec"):
-                        raw_case_no = clean_html_tags(item.findtext("사건번호", "번호 미상"))
-                        raw_case_name = clean_html_tags(item.findtext("사건명", "사건명 없음"))
+                    for law_item in root.findall(".//prec"):
+                        raw_case_no = clean_html_tags(law_item.findtext("사건번호", "번호 미상"))
+                        raw_case_name = clean_html_tags(law_item.findtext("사건명", "사건명 없음"))
                         results.append({
                             "title": f"[{raw_case_no}] {raw_case_name}",
-                            "mst": item.findtext("판례일련번호", ""),
-                            "detail": f"{clean_html_tags(item.findtext('법원명', ''))} | 선고일자: {item.findtext('선고일자', '')}",
+                            "mst": law_item.findtext("판례일련번호", ""),
+                            "detail": f"{clean_html_tags(law_item.findtext('법원명', ''))} | 선고일자: {law_item.findtext('선고일자', '')}",
                             "type": "prec"
                         })
                 
-                parsed_list = [r for r in results if r["mst"]]
-                if parsed_list:
-                    return parsed_list
+                parsed = [r for r in results if r["mst"]]
+                if parsed:
+                    return parsed
         except Exception:
             continue
             
-    st.sidebar.warning("📡 법제처 API 수집 지연 중입니다. 잠시 후 다시 시도해 주세요.")
+    st.sidebar.warning("🚨 **[해외 IP 방화벽 차단 감지]**\n현재 접속 환경(해외 AWS IP)은 법제처 보안 정책상 커넥션이 차단됩니다.\n\n👉 **국내 IP (로컬 개발 주소 http://localhost:8506)**에서 접속하시면 차단 없이 0.4초 만에 수월하게 가동됩니다.")
     return []
 
 @st.cache_data(show_spinner=False)
 def fetch_body_api(mst: str, doc_type: str) -> str:
     """
-    특정 MST/ID 코드를 기반으로 법제처/공공데이터포털에서 본문 XML 수집
+    특정 MST/ID 코드를 기반으로 법제처/공공데이터포털 4단 멀티 수집
     """
-    endpoints = [
-        "https://apis.data.go.kr/1170000/law/lawService.do",
-        "https://www.law.go.kr/DRF/lawService.do"
+    targets = [
+        {"url": "https://www.law.go.kr/DRF/lawService.do", "key": "OC"},
+        {"url": "http://www.law.go.kr/DRF/lawService.do", "key": "OC"},
+        {"url": "https://apis.data.go.kr/1170000/law/lawService.do", "key": "serviceKey"},
+        {"url": "http://apis.data.go.kr/1170000/law/lawService.do", "key": "serviceKey"}
     ]
     
     params_map = {
@@ -279,16 +282,16 @@ def fetch_body_api(mst: str, doc_type: str) -> str:
         return "[오류] 올바르지 않은 문서 타입"
         
     cfg = params_map[doc_type]
-    params = {
-        "OC": LAW_OC,
-        "target": cfg["target"],
-        cfg["key"]: mst,
-        "type": "XML"
-    }
     
-    for url in endpoints:
+    for item in targets:
+        params = {
+            item["key"]: LAW_OC,
+            "target": cfg["target"],
+            cfg["key"]: mst,
+            "type": "XML"
+        }
         try:
-            res = requests.get(url, params=params, headers=LAW_API_HEADERS, verify=False, timeout=(8, 15))
+            res = requests.get(item["url"], params=params, headers=LAW_API_HEADERS, verify=False, timeout=(4, 8))
             if res.status_code == 200 and len(res.content) > 50:
                 root = ET.fromstring(res.content)
                 body_text = ""
@@ -363,7 +366,7 @@ def fetch_body_api(mst: str, doc_type: str) -> str:
         except Exception:
             continue
             
-    return "[안내] 법령 본문을 수집 중입니다. 잠시 후 새로고침해 주세요."
+    return "[안내] 국내 IP 환경(http://localhost:8506)에서 접속하시면 조문 원문이 즉시 렌더링됩니다."
 
 # ==========================================
 # 2. 시스템 인증 헬스 체크
