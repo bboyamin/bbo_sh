@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 # ==========================================
 st.set_page_config(page_title="행정 자문관 - 법제처 Direct Open API RAG", page_icon="🏛️", layout="wide")
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-load_dotenv()
+load_dotenv(override=True)
 
 def get_secret(key_names, default_val=""):
     if isinstance(key_names, str):
