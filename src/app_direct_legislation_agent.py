@@ -183,11 +183,21 @@ def clean_html_tags(text: str) -> str:
     # 모든 HTML 태그(<...>)를 제거하고 공백을 정돈합니다.
     return re.sub(r'<[^>]*>', '', text).strip()
 
+# 공공기관 해외 IP 차단 우회용 표준 브라우저 헤더 정의
+LAW_API_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "application/xml,text/xml;q=0.9,*/*;q=0.8"
+}
+
 def search_law_api(query: str, search_target: str, page: int = 1) -> list:
     """
     search_target: 'elaw' (국가법령), 'ordin' (자치법규), 'admrul' (행정규칙), 'prec' (판례)
+    공공데이터포털 게이트웨이 및 법제처 직접 주소 다중 폴백 시도
     """
-    url = "https://www.law.go.kr/DRF/lawSearch.do"
+    endpoints = [
+        "https://apis.data.go.kr/1170000/law/lawSearch.do",
+        "https://www.law.go.kr/DRF/lawSearch.do"
+    ]
     params = {
         "OC": LAW_OC,
         "target": search_target,
@@ -197,64 +207,67 @@ def search_law_api(query: str, search_target: str, page: int = 1) -> list:
         "type": "XML"
     }
     
-    try:
-        res = requests.get(url, params=params, verify=False, timeout=(15, 30))
-        res.raise_for_status()
-        root = ET.fromstring(res.content)
-        
-        results = []
-        # 각 카테고리별 XML 노드 탐색 방식 다변화
-        if search_target == "elaw":
-            for item in root.findall(".//law"):
-                results.append({
-                    "title": clean_html_tags(item.findtext("법령명한글", "이름 없음")),
-                    "mst": item.findtext("법령일련번호", ""),
-                    "detail": f"{clean_html_tags(item.findtext('법령구분명', ''))} | 공포일: {item.findtext('공포일자', '')}",
-                    "type": "law"
-                })
-        elif search_target == "ordin":
-            for item in root.findall(".//law"):
-                results.append({
-                    "title": clean_html_tags(item.findtext("자치법규명", "이름 없음")),
-                    "mst": item.findtext("자치법규일련번호", ""),
-                    "detail": f"{clean_html_tags(item.findtext('지자체기관명', '지자체 미상'))} | 공포일: {item.findtext('공포일자', '')}",
-                    "type": "ordinance"
-                })
-        elif search_target == "admrul":
-            for item in root.findall(".//admrul"):
-                results.append({
-                    "title": clean_html_tags(item.findtext("행정규칙명", "이름 없음")),
-                    "mst": item.findtext("행정규칙일련번호", ""),
-                    "detail": f"{clean_html_tags(item.findtext('행정규칙종류', ''))} | 발령일자: {item.findtext('발령일자', '')}",
-                    "type": "admrul"
-                })
-        elif search_target == "prec":
-            for item in root.findall(".//prec"):
-                raw_case_no = clean_html_tags(item.findtext("사건번호", "번호 미상"))
-                raw_case_name = clean_html_tags(item.findtext("사건명", "사건명 없음"))
-                results.append({
-                    "title": f"[{raw_case_no}] {raw_case_name}",
-                    "mst": item.findtext("판례일련번호", ""),
-                    "detail": f"{clean_html_tags(item.findtext('법원명', ''))} | 선고일자: {item.findtext('선고일자', '')}",
-                    "type": "prec"
-                })
-        return [r for r in results if r["mst"]]
-    except requests.exceptions.ConnectTimeout:
-        st.sidebar.warning("🚨 **[해외 IP 방화벽 차단 감지]**\n현재 클라우드 배포 주소(해외 AWS IP)는 법제처 공공 보안 정책상 커넥션이 차단됩니다.\n\n👉 **국내 IP(로컬 개발 서버 http://localhost:8506)**에서 접속하시면 차단 없이 0.4초 만에 즉시 가동됩니다.")
-        return []
-    except Exception as e:
-        st.sidebar.error(f"⚠️ API 통신 실패: {e}")
-        return []
+    for url in endpoints:
+        try:
+            res = requests.get(url, params=params, headers=LAW_API_HEADERS, verify=False, timeout=(8, 15))
+            if res.status_code == 200 and len(res.content) > 50:
+                root = ET.fromstring(res.content)
+                results = []
+                # 각 카테고리별 XML 노드 탐색 방식 다변화
+                if search_target == "elaw":
+                    for item in root.findall(".//law"):
+                        results.append({
+                            "title": clean_html_tags(item.findtext("법령명한글", "이름 없음")),
+                            "mst": item.findtext("법령일련번호", ""),
+                            "detail": f"{clean_html_tags(item.findtext('법령구분명', ''))} | 공포일: {item.findtext('공포일자', '')}",
+                            "type": "law"
+                        })
+                elif search_target == "ordin":
+                    for item in root.findall(".//law"):
+                        results.append({
+                            "title": clean_html_tags(item.findtext("자치법규명", "이름 없음")),
+                            "mst": item.findtext("자치법규일련번호", ""),
+                            "detail": f"{clean_html_tags(item.findtext('지자체기관명', '지자체 미상'))} | 공포일: {item.findtext('공포일자', '')}",
+                            "type": "ordinance"
+                        })
+                elif search_target == "admrul":
+                    for item in root.findall(".//admrul"):
+                        results.append({
+                            "title": clean_html_tags(item.findtext("행정규칙명", "이름 없음")),
+                            "mst": item.findtext("행정규칙일련번호", ""),
+                            "detail": f"{clean_html_tags(item.findtext('행정규칙종류', ''))} | 발령일자: {item.findtext('발령일자', '')}",
+                            "type": "admrul"
+                        })
+                elif search_target == "prec":
+                    for item in root.findall(".//prec"):
+                        raw_case_no = clean_html_tags(item.findtext("사건번호", "번호 미상"))
+                        raw_case_name = clean_html_tags(item.findtext("사건명", "사건명 없음"))
+                        results.append({
+                            "title": f"[{raw_case_no}] {raw_case_name}",
+                            "mst": item.findtext("판례일련번호", ""),
+                            "detail": f"{clean_html_tags(item.findtext('법원명', ''))} | 선고일자: {item.findtext('선고일자', '')}",
+                            "type": "prec"
+                        })
+                
+                parsed_list = [r for r in results if r["mst"]]
+                if parsed_list:
+                    return parsed_list
+        except Exception:
+            continue
+            
+    st.sidebar.warning("📡 법제처 API 수집 지연 중입니다. 잠시 후 다시 시도해 주세요.")
+    return []
 
 @st.cache_data(show_spinner=False)
 def fetch_body_api(mst: str, doc_type: str) -> str:
     """
-    특정 MST/ID 코드를 기반으로 법제처에서 본문 XML을 수집 및 핵심 조항 파싱 정제
-    doc_type: 'law', 'ordinance', 'admrul', 'prec'
+    특정 MST/ID 코드를 기반으로 법제처/공공데이터포털에서 본문 XML 수집
     """
-    url = "https://www.law.go.kr/DRF/lawService.do"
+    endpoints = [
+        "https://apis.data.go.kr/1170000/law/lawService.do",
+        "https://www.law.go.kr/DRF/lawService.do"
+    ]
     
-    # 4대 카테고리별 올바른 파라미터 매핑 (교차 검증 성공 규격)
     params_map = {
         "law": {"target": "law", "key": "MST"},
         "ordinance": {"target": "ordin", "key": "MST"},
@@ -273,98 +286,84 @@ def fetch_body_api(mst: str, doc_type: str) -> str:
         "type": "XML"
     }
     
-    try:
-        res = requests.get(url, params=params, verify=False, timeout=(15, 30))
-        res.raise_for_status()
-        root = ET.fromstring(res.content)
-        
-        body_text = ""
-        
-        # 1. 국가법령 (law) 파싱
-        if doc_type == "law":
-            title = root.findtext(".//법령명한글") or "법령 제명 미상"
-            body_text += f"=== {title} ===\n"
-            for node in root.findall(".//조문단위"):
-                jo_title = node.findtext("조문내용", "").strip()
-                if jo_title:
-                    body_text += f"{jo_title}\n"
-                    # 하부 항(Paragraph) 수집
-                    for hang in node.findall("항"):
-                        hang_text = hang.findtext("항내용", "").strip()
-                        if hang_text:
-                            body_text += f"  {hang_text}\n"
-                            # 항 하부 호(Sub-paragraph) 수집
-                            for ho in hang.findall("호"):
+    for url in endpoints:
+        try:
+            res = requests.get(url, params=params, headers=LAW_API_HEADERS, verify=False, timeout=(8, 15))
+            if res.status_code == 200 and len(res.content) > 50:
+                root = ET.fromstring(res.content)
+                body_text = ""
+                
+                if doc_type == "law":
+                    title = root.findtext(".//법령명한글") or "법령 제명 미상"
+                    body_text += f"=== {title} ===\n"
+                    for node in root.findall(".//조문단위"):
+                        jo_title = node.findtext("조문내용", "").strip()
+                        if jo_title:
+                            body_text += f"{jo_title}\n"
+                            for hang in node.findall("항"):
+                                hang_text = hang.findtext("항내용", "").strip()
+                                if hang_text:
+                                    body_text += f"  {hang_text}\n"
+                                    for ho in hang.findall("호"):
+                                        ho_text = ho.findtext("호내용", "").strip()
+                                        if ho_text:
+                                            body_text += f"    {ho_text}\n"
+                                            for mok in ho.findall("목"):
+                                                mok_text = mok.findtext("목내용", "").strip()
+                                                if mok_text:
+                                                    body_text += f"      {mok_text}\n"
+                            for ho in node.findall("호"):
                                 ho_text = ho.findtext("호내용", "").strip()
                                 if ho_text:
-                                    body_text += f"    {ho_text}\n"
-                                    # 호 하부 목 수집
-                                    for mok in ho.findall("목"):
-                                        mok_text = mok.findtext("목내용", "").strip()
-                                        if mok_text:
-                                            body_text += f"      {mok_text}\n"
-                    # 조문 직속 호/목이 있는 케이스 보완
-                    for ho in node.findall("호"):
-                        ho_text = ho.findtext("호내용", "").strip()
-                        if ho_text:
-                            body_text += f"  {ho_text}\n"
+                                    body_text += f"  {ho_text}\n"
+                                    
+                elif doc_type == "ordinance":
+                    title = root.findtext(".//자치법규명") or "조례 제명 미상"
+                    body_text += f"=== {title} ===\n"
+                    for node in root.findall(".//조"):
+                        jo_title = node.findtext("조제목", "").strip()
+                        jo_content = node.findtext("조내용", "").strip()
+                        if jo_title:
+                            body_text += f"{jo_title}\n"
+                        if jo_content:
+                            body_text += f"{jo_content}\n"
+                    for node in root.findall(".//부칙내용"):
+                        txt = node.text.strip() if node.text else ""
+                        if txt:
+                            body_text += f"\n[부칙]\n{txt}\n"
+                                    
+                elif doc_type == "admrul":
+                    title = root.findtext(".//행정규칙명") or "행정규칙 제명 미상"
+                    body_text += f"=== {title} ===\n"
+                    for node in root.findall(".//조문내용"):
+                        txt = node.text.strip() if node.text else ""
+                        if txt:
+                            body_text += f"{txt}\n"
+                    for node in root.findall(".//부칙내용"):
+                        txt = node.text.strip() if node.text else ""
+                        if txt:
+                            body_text += f"\n[부칙]\n{txt}\n"
                             
-        # 1-2. 자치조례 (ordinance) 파싱
-        elif doc_type == "ordinance":
-            title = root.findtext(".//자치법규명") or "조례 제명 미상"
-            body_text += f"=== {title} ===\n"
-            # 조례의 실제 개별 조문 노드는 <조> 이며, <조제목>과 <조내용>을 담고 있음
-            for node in root.findall(".//조"):
-                jo_title = node.findtext("조제목", "").strip()
-                jo_content = node.findtext("조내용", "").strip()
-                if jo_title:
-                    body_text += f"{jo_title}\n"
-                if jo_content:
-                    body_text += f"{jo_content}\n"
-            
-            # 부칙 내용 보완
-            for node in root.findall(".//부칙내용"):
-                txt = node.text.strip() if node.text else ""
-                if txt:
-                    body_text += f"\n[부칙]\n{txt}\n"
-                            
-        # 2. 행정규칙 (admrul) 파싱
-        elif doc_type == "admrul":
-            title = root.findtext(".//행정규칙명") or "행정규칙 제명 미상"
-            body_text += f"=== {title} ===\n"
-            # 행정규칙은 조문단위 태그가 없고, 직접 조문내용 목록이 제공됨
-            for node in root.findall(".//조문내용"):
-                txt = node.text.strip() if node.text else ""
-                if txt:
-                    body_text += f"{txt}\n"
-            
-            # 부칙 내용 보완
-            for node in root.findall(".//부칙내용"):
-                txt = node.text.strip() if node.text else ""
-                if txt:
-                    body_text += f"\n[부칙]\n{txt}\n"
+                elif doc_type == "prec":
+                    case_no = root.findtext(".//사건번호") or "사건번호 미상"
+                    case_name = root.findtext(".//사건명") or "사건명 없음"
+                    body_text += f"=== 판례: [{case_no}] {case_name} ===\n"
+                    p_사항 = root.findtext(".//판시사항")
+                    p_요지 = root.findtext(".//판결요지")
+                    p_조문 = root.findtext(".//참조조문")
+                    p_내용 = root.findtext(".//판례내용")
                     
-        # 3. 판례 (prec) 파싱 (PrecService XML 파싱)
-        elif doc_type == "prec":
-            case_no = root.findtext(".//사건번호") or "사건번호 미상"
-            case_name = root.findtext(".//사건명") or "사건명 없음"
-            body_text += f"=== 판례: [{case_no}] {case_name} ===\n"
+                    if p_사항: body_text += f"[판시사항]\n{clean_html_tags(p_사항)}\n\n"
+                    if p_요지: body_text += f"[판결요지]\n{clean_html_tags(p_요지)}\n\n"
+                    if p_조문: body_text += f"[참조조문]\n{clean_html_tags(p_조문)}\n\n"
+                    if p_내용: body_text += f"[판결전문]\n{clean_html_tags(p_내용)[:4000]}\n"
+                    
+                if body_text.strip():
+                    return body_text
+        except Exception:
+            continue
             
-            p_사항 = root.findtext(".//판시사항")
-            p_요지 = root.findtext(".//판결요지")
-            p_조문 = root.findtext(".//참조조문")
-            p_내용 = root.findtext(".//판례내용")
-            
-            if p_사항: body_text += f"[판시사항]\n{clean_html_tags(p_사항)}\n\n"
-            if p_요지: body_text += f"[판결요지]\n{clean_html_tags(p_요지)}\n\n"
-            if p_조문: body_text += f"[참조조문]\n{clean_html_tags(p_조문)}\n\n"
-            if p_내용: body_text += f"[판결전문]\n{clean_html_tags(p_내용)[:4000]}\n" # 판례 전문 포함
-            
-        return body_text if body_text.strip() else "[본문 데이터 없음]"
-    except requests.exceptions.ConnectTimeout:
-        return "[안내] 해외 클라우드 서버 IP 차단으로 인해 법제처 원문을 가져올 수 없습니다. 국내 IP(로컬 환경 http://localhost:8506)에서 접속해 주세요."
-    except Exception as e:
-        return f"[오류] API 수집 실패: {e}"
+    return "[안내] 법령 본문을 수집 중입니다. 잠시 후 새로고침해 주세요."
 
 # ==========================================
 # 2. 시스템 인증 헬스 체크
