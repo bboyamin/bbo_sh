@@ -172,10 +172,7 @@ def deduplicate_issues(items):
     result = []
     for cluster in unique_clusters:
         rep = cluster["representative"]
-        if cluster["duplicates_count"] > 1:
-            rep["dedup_badge"] = f"🔄 유사기사 {cluster['duplicates_count']}건 통합"
-        else:
-            rep["dedup_badge"] = None
+        rep["dedup_badge"] = None
         result.append(rep)
 
     return result

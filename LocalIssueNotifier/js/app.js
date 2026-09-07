@@ -341,7 +341,6 @@ function renderIssues() {
       const hasPreSummary = item.summary && item.summary.length > 0;
       const summaryItems = hasPreSummary ? item.summary.map(s => `<li>${s}</li>`).join('') : '';
       const isNegBadge = item.is_negative ? `<span class="is-neg-tag" style="background:#FEF2F2; color:#EF4444; border:1px solid #FECACA; font-size:10px; font-weight:700; padding:2px 6px; border-radius:10px; margin-left:6px;">🚨 관심 이슈</span>` : '';
-      const dedupBadge = item.dedup_badge ? `<span style="background:#F1F5F9; color:#475569; border:1px solid #CBD5E1; font-size:10px; font-weight:700; padding:2px 6px; border-radius:10px; margin-left:6px;">${item.dedup_badge}</span>` : '';
       
       let linkText = '원문 보기 ↗';
       if (item.type === 'youtube') linkText = '영상 재생 ↗';
@@ -358,7 +357,7 @@ function renderIssues() {
       html += `
         <div class="issue-card" data-category="${item.type}" data-title="${titleAttr}" data-content="${contentAttr}" data-keyword="${item.keyword || '용인시'}">
           <div class="card-top">
-            <span class="source-tag ${badgeClass}">${item.badge} · ${item.publisher} ${isNegBadge} ${dedupBadge}</span>
+            <span class="source-tag ${badgeClass}">${item.badge} · ${item.publisher} ${isNegBadge}</span>
             <span class="card-time">${item.time}</span>
           </div>
           <h3 class="card-title">${item.title}</h3>
