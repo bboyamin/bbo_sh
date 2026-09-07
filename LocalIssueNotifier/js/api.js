@@ -16,13 +16,15 @@ const IssueApi = (() => {
         const kwParam = encodeURIComponent(keywordsList.join(','));
         const res = await fetch(`/api/collect?keywords=${kwParam}&v=` + Date.now());
         if (res.ok) {
-          return await res.json();
+          const liveData = await res.json();
+          if (Array.isArray(liveData) && liveData.length >= 10) {
+            return liveData;
+          }
         }
-        throw new Error(`Server returned HTTP ${res.status}`);
       } catch (err) {
-        console.error('IssueApi.fetchKeywordIssues error:', err);
-        throw err;
+        console.warn('Live API collect error, loading default dataset:', err);
       }
+      return await this.loadDefaultIssues();
     },
 
     /**

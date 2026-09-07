@@ -278,7 +278,7 @@ def fetch_naver_blog(keyword, limit=3):
 # ----------------------------------------------------
 # 3. 구글 뉴스 RSS 수집기
 # ----------------------------------------------------
-def fetch_google_news_rss(keyword, limit=3):
+def fetch_google_news_rss(keyword, limit=15):
     encoded_kw = urllib.parse.quote(keyword)
     rss_url = f"https://news.google.com/rss/search?q={encoded_kw}+when:7d&hl=ko&gl=KR&ceid=KR:ko"
     headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}

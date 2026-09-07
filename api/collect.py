@@ -20,11 +20,28 @@ class handler(BaseHTTPRequestHandler):
         kw_str = params.get('keywords', ['용인시,처인구'])[0]
         keywords = [k.strip() for k in kw_str.split(',') if k.strip()]
         
+        # Try loading static dataset for fallback
+        static_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "public", "data", "issues.json"))
+        if not os.path.exists(static_file):
+            static_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "LocalIssueNotifier", "data", "issues.json"))
+
+        static_issues = []
+        if os.path.exists(static_file):
+            try:
+                with open(static_file, 'r', encoding='utf-8') as f:
+                    static_issues = json.load(f)
+            except Exception:
+                pass
+
         try:
-            issues = collect_all_issues(keywords=keywords)
+            live_issues = collect_all_issues(keywords=keywords)
+            if len(live_issues) >= 10:
+                issues = live_issues
+            else:
+                issues = static_issues if len(static_issues) > len(live_issues) else live_issues
         except Exception as e:
             print("Vercel collect error:", e)
-            issues = []
+            issues = static_issues
 
         body = json.dumps(issues, ensure_ascii=False).encode('utf-8')
         
