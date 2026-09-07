@@ -286,9 +286,12 @@ function renderIssues() {
 
   if (!currentIssues.length) return;
 
-  // Filter issues by currently selected keyword first
   const keywordFiltered = currentIssues.filter(item => {
-    return currentKeyword === '전체' || item.keyword === currentKeyword || (item.title && item.title.includes(currentKeyword));
+    if (currentKeyword === '전체') return true;
+    if (item.keyword === currentKeyword) return true;
+    if ((currentKeyword === '용인시' || currentKeyword === '용인특례시') && (item.keyword === '용인시' || item.keyword === '용인특례시')) return true;
+    const searchSpace = ((item.title || '') + ' ' + (item.content || '') + ' ' + (item.publisher || '')).toLowerCase();
+    return searchSpace.includes(currentKeyword.toLowerCase());
   });
 
   // Calculate category tab counts based strictly on the selected keyword's contents

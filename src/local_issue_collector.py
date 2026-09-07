@@ -279,8 +279,14 @@ def fetch_naver_blog(keyword, limit=3):
 # 3. 구글 뉴스 RSS 수집기
 # ----------------------------------------------------
 def fetch_google_news_rss(keyword, limit=15):
-    encoded_kw = urllib.parse.quote(keyword)
-    rss_url = f"https://news.google.com/rss/search?q={encoded_kw}+when:7d&hl=ko&gl=KR&ceid=KR:ko"
+    query = f"{keyword}+when:7d"
+    if keyword == "용인특례시":
+        query = "용인특례시+OR+용인시+when:7d"
+    elif keyword in ["처인구", "기흥구", "수지구"]:
+        query = f"용인+{keyword}+when:7d"
+        
+    encoded_kw = urllib.parse.quote(query)
+    rss_url = f"https://news.google.com/rss/search?q={encoded_kw}&hl=ko&gl=KR&ceid=KR:ko"
     headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
 
     items = []
@@ -352,7 +358,7 @@ def fetch_multichannel_sns(keywords):
 # ----------------------------------------------------
 # 메인 통합 수집 프로세스
 # ----------------------------------------------------
-def collect_all_issues(keywords=["용인시", "처인구", "용인특례시"]):
+def collect_all_issues(keywords=["용인시", "처인구", "용인특례시", "기흥구", "수지구"]):
     raw_issues = []
     
     for kw in keywords:
@@ -364,8 +370,8 @@ def collect_all_issues(keywords=["용인시", "처인구", "용인특례시"]):
         n_blogs = fetch_naver_blog(kw, limit=10)
         raw_issues.extend(n_blogs)
 
-        # 3. 구글 뉴스 RSS 수집 (10건)
-        g_items = fetch_google_news_rss(kw, limit=10)
+        # 3. 구글 뉴스 RSS 수집 (15건)
+        g_items = fetch_google_news_rss(kw, limit=15)
         raw_issues.extend(g_items)
 
     # 4. 유튜브 & 쓰레드 수집
