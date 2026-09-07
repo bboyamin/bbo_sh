@@ -394,7 +394,33 @@ function switchCategory(cat, btn) {
   renderIssues();
 }
 
-function triggerRealPushNotification(title, body) {
+async function requestNotificationPermission() {
+  if (!('Notification' in window)) {
+    showToast('⚠️ 이 브라우저는 푸시 알림을 지원하지 않습니다.');
+    return false;
+  }
+  
+  if (Notification.permission === 'granted') {
+    return true;
+  }
+  
+  if (Notification.permission !== 'denied') {
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        showToast('✅ 알림 권한이 허용되었습니다!');
+        return true;
+      }
+    } catch (e) {
+      console.error('Notification permission request error:', e);
+    }
+  }
+
+  showToast('⚠️ 아이폰/브라우저 [설정 > 알림]에서 알림을 허용해주세요.');
+  return false;
+}
+
+async function triggerRealPushNotification(title, body) {
   const push = document.getElementById('pushBanner');
   if (push) {
     const titleElem = push.querySelector('.push-title span:first-child');
@@ -407,21 +433,40 @@ function triggerRealPushNotification(title, body) {
 
   showToast(`🔔 ${title}`);
 
-  if ('Notification' in window && Notification.permission === 'granted') {
-    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.ready.then(registration => {
-        registration.showNotification(title, {
-          body: body,
-          vibrate: [200, 100, 200]
+  if ('Notification' in window) {
+    let perm = Notification.permission;
+    if (perm === 'default') {
+      try {
+        perm = await Notification.requestPermission();
+      } catch (e) {}
+    }
+
+    if (perm === 'granted') {
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.ready.then(registration => {
+          registration.showNotification(title, {
+            body: body,
+            icon: './apple-touch-icon.png',
+            badge: './apple-touch-icon.png',
+            vibrate: [200, 100, 200]
+          });
         });
-      });
-    } else {
-      new Notification(title, { body: body });
+      } else {
+        try {
+          new Notification(title, {
+            body: body,
+            icon: './apple-touch-icon.png'
+          });
+        } catch (e) {
+          console.log('Fallback Notification error:', e);
+        }
+      }
     }
   }
 }
 
-function triggerNotificationTest() {
+async function triggerNotificationTest() {
+  await requestNotificationPermission();
   triggerRealPushNotification(
     `🔔 [속보 알림] #${currentKeyword || '용인시'} 주요 이슈`,
     `[${currentKeyword || '용인시'}] 실시간 주요 소식 수집 및 FactChat AI 3줄 요약 수신완료`
