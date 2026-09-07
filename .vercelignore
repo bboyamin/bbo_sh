@@ -1,0 +1,9 @@
+# Exclude non-web server script directories from Vercel deployment detection
+src/
+ReportAI/
+chroma_db/
+temp_docs/
+temp_ict_docs/
+*.hwpx
+*.csv
+*.db

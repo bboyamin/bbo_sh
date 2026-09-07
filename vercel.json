@@ -1,5 +1,10 @@
 {
   "version": 2,
+  "functions": {
+    "api/collect.py": {
+      "maxDuration": 15
+    }
+  },
   "rewrites": [
     { "source": "/api/collect", "destination": "/api/collect.py" },
     { "source": "/", "destination": "/LocalIssueNotifier/index.html" },
