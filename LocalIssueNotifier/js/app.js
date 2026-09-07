@@ -420,15 +420,24 @@ async function requestNotificationPermission() {
   return false;
 }
 
-async function triggerRealPushNotification(title, body) {
+async function triggerRealPushNotification(title, body, targetUrl) {
   const push = document.getElementById('pushBanner');
   if (push) {
     const titleElem = push.querySelector('.push-title span:first-child');
     const descElem = push.querySelector('.push-desc');
     if (titleElem) titleElem.textContent = title;
     if (descElem) descElem.textContent = body;
+
+    if (targetUrl && targetUrl.startsWith('http')) {
+      push.style.cursor = 'pointer';
+      push.onclick = () => window.open(targetUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      push.style.cursor = 'default';
+      push.onclick = null;
+    }
+
     push.classList.add('show');
-    setTimeout(() => push.classList.remove('show'), 5000);
+    setTimeout(() => push.classList.remove('show'), 6000);
   }
 
   showToast(`🔔 ${title}`);
@@ -442,21 +451,29 @@ async function triggerRealPushNotification(title, body) {
     }
 
     if (perm === 'granted') {
+      const finalUrl = (targetUrl && targetUrl.startsWith('http')) ? targetUrl : window.location.href;
       if (navigator.serviceWorker && navigator.serviceWorker.controller) {
         navigator.serviceWorker.ready.then(registration => {
           registration.showNotification(title, {
             body: body,
             icon: './apple-touch-icon.png',
             badge: './apple-touch-icon.png',
-            vibrate: [200, 100, 200]
+            vibrate: [200, 100, 200],
+            data: { url: finalUrl }
           });
         });
       } else {
         try {
-          new Notification(title, {
+          const n = new Notification(title, {
             body: body,
-            icon: './apple-touch-icon.png'
+            icon: './apple-touch-icon.png',
+            data: { url: finalUrl }
           });
+          n.onclick = (e) => {
+            e.preventDefault();
+            window.open(finalUrl, '_blank', 'noopener,noreferrer');
+            window.focus();
+          };
         } catch (e) {
           console.log('Fallback Notification error:', e);
         }
@@ -467,9 +484,14 @@ async function triggerRealPushNotification(title, body) {
 
 async function triggerNotificationTest() {
   await requestNotificationPermission();
+  const topItem = currentIssues.length ? currentIssues[0] : null;
+  const testTitle = topItem ? topItem.title : `[${currentKeyword || '용인시'}] 실시간 주요 속보`;
+  const testUrl = topItem ? topItem.url : 'https://news.naver.com';
+
   triggerRealPushNotification(
-    `🔔 [속보 알림] #${currentKeyword || '용인시'} 주요 이슈`,
-    `[${currentKeyword || '용인시'}] 실시간 주요 소식 수집 및 FactChat AI 3줄 요약 수신완료`
+    `🔔 [속보 알림] #${topItem ? topItem.keyword : (currentKeyword || '용인시')}`,
+    testTitle,
+    testUrl
   );
 }
 
@@ -617,7 +639,8 @@ function startAutoPolling() {
           const topItem = newItems[0];
           triggerRealPushNotification(
             `🔔 [신규 속보] #${topItem.keyword || '용인시'} 새 이슈`,
-            topItem.title
+            topItem.title,
+            topItem.url
           );
         }
       }

@@ -1,8 +1,10 @@
-const CACHE_NAME = 'yongin-issue-cache-v2';
+const CACHE_NAME = 'yongin-issue-cache-v4';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  './apple-touch-icon.png',
+  './icon-512.png'
 ];
 
 // Service Worker Install - Pre-cache shell assets
@@ -66,7 +68,7 @@ self.addEventListener('fetch', (event) => {
 
 // Push Notification Listener
 self.addEventListener('push', (event) => {
-  let data = { title: '🔔 용인 핫이슈 새 알림', body: '관심 키워드의 새로운 이슈가 등록되었습니다.' };
+  let data = { title: '🔔 용인 핫이슈 새 알림', body: '관심 키워드의 새로운 이슈가 등록되었습니다.', url: './index.html' };
   if (event.data) {
     try {
       data = event.data.json();
@@ -75,12 +77,13 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  const targetUrl = data.url || './index.html';
   const options = {
     body: data.body,
-    icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="%232563eb"/><text x="50" y="65" font-size="50" font-weight="bold" text-anchor="middle" fill="white">🔔</text></svg>',
-    badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="%232563eb"/><text x="50" y="65" font-size="50" font-weight="bold" text-anchor="middle" fill="white">🔔</text></svg>',
+    icon: './apple-touch-icon.png',
+    badge: './apple-touch-icon.png',
     vibrate: [200, 100, 200],
-    data: { url: './index.html' }
+    data: { url: targetUrl }
   };
 
   event.waitUntil(
@@ -88,18 +91,24 @@ self.addEventListener('push', (event) => {
   );
 });
 
-// Notification Click Handler
+// Notification Click Handler - Open Target Article URL Directly!
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : './index.html';
+
   event.waitUntil(
-    clients.matchAll({ type: 'window' }).then((clientList) => {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if (client.url.includes('index.html') && 'focus' in client) {
-          return client.focus();
+        if ('focus' in client) {
+          client.focus();
+          if (targetUrl && targetUrl.startsWith('http')) {
+            if (client.navigate) client.navigate(targetUrl);
+          }
+          return;
         }
       }
       if (clients.openWindow) {
-        return clients.openWindow('./index.html');
+        return clients.openWindow(targetUrl);
       }
     })
   );
