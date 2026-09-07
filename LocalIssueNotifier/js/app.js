@@ -50,6 +50,7 @@ function renderKeywordChips() {
 async function fetchKeywordIssues(keywordsList) {
   try {
     currentIssues = await IssueApi.fetchKeywordIssues(keywordsList);
+    renderKeywordChips();
     renderIssues();
     showToast(`✅ 최신 소식 수집이 완료되었습니다.`);
   } catch (err) {
@@ -120,8 +121,44 @@ function updateScrapBadge() {
   }
 }
 
-function switchNavTab(tab, btn) {
+async function refreshFeed() {
+  const realtimeBar = document.querySelector('.realtime-bar');
+  const feedContainer = document.getElementById('feedContainer');
+  
+  showToast('🔄 최신 소식 수집 및 업데이트 중...');
+  
+  if (realtimeBar) {
+    realtimeBar.style.opacity = '0.7';
+    const textElem = realtimeBar.querySelector('.realtime-indicator span');
+    if (textElem) textElem.innerHTML = '실시간 이슈 피드 <span class="spin-icon">🔄</span> <strong>수집 중...</strong>';
+  }
+  if (feedContainer) {
+    feedContainer.style.opacity = '0.5';
+  }
+
+  const userKeywords = StorageManager.getKeywords();
+  try {
+    if (userKeywords.length > 0) {
+      currentIssues = await IssueApi.fetchKeywordIssues(userKeywords);
+    }
+  } catch (err) {
+    console.warn('Refresh error:', err);
+  } finally {
+    renderKeywordChips();
+    renderIssues();
+    if (feedContainer) {
+      feedContainer.style.opacity = '1';
+    }
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    showToast(`✅ 실시간 피드 업데이트 완료 (${timeStr})`);
+  }
+}
+
+async function switchNavTab(tab, btn) {
+  const isAlreadyFeed = (currentNavTab === 'feed' && tab === 'feed');
   currentNavTab = tab;
+
   const navBtns = document.querySelectorAll('.app-bottom-nav .nav-item');
   navBtns.forEach(b => {
     if (!b.innerText.includes('설정')) {
@@ -135,12 +172,17 @@ function switchNavTab(tab, btn) {
   if (tab === 'bookmark') {
     if (categoryTabs) categoryTabs.style.display = 'none';
     if (keywordChips) keywordChips.style.display = 'none';
+    renderIssues();
   } else {
     if (categoryTabs) categoryTabs.style.display = 'flex';
     if (keywordChips) keywordChips.style.display = 'flex';
-  }
 
-  renderIssues();
+    if (isAlreadyFeed) {
+      await refreshFeed();
+    } else {
+      renderIssues();
+    }
+  }
 }
 
 function renderIssues() {
@@ -182,6 +224,7 @@ function renderIssues() {
 
         const titleAttr = (item.title || '').replace(/"/g, '&quot;');
         const contentAttr = (item.content || item.title || '').replace(/"/g, '&quot;');
+        const urlAttr = (item.url || '#').replace(/'/g, "\\'");
 
         html += `
           <div class="issue-card" data-category="${item.type}" data-title="${titleAttr}" data-content="${contentAttr}" data-keyword="${item.keyword || '용인시'}">
@@ -205,7 +248,7 @@ function renderIssues() {
             <div class="card-footer">
               <div class="card-btns">
                 <button class="card-action-btn scrapped" onclick="toggleScrap(this, '${titleAttr}')">★ 스크랩됨</button>
-                <button class="card-action-btn" onclick="shareArticle('${(item.title || '').replace(/'/g, "")}')">🔗 공유</button>
+                <button class="card-action-btn" onclick="shareArticle('${titleAttr}', '${urlAttr}')">🔗 공유</button>
               </div>
               <a href="${item.url || '#'}" target="_blank" rel="noopener noreferrer" class="link-btn" onclick="openContentUrl('${item.url || '#'}', event)">${linkText}</a>
             </div>
@@ -243,18 +286,17 @@ function renderIssues() {
 
   if (!currentIssues.length) return;
 
-  const filtered = currentIssues.filter(item => {
-    const matchCat = (currentCategory === 'all' || item.type === currentCategory);
-    const matchKw = (currentKeyword === '전체' || item.keyword === currentKeyword || (item.title && item.title.includes(currentKeyword)));
-    return matchCat && matchKw;
+  // Filter issues by currently selected keyword first
+  const keywordFiltered = currentIssues.filter(item => {
+    return currentKeyword === '전체' || item.keyword === currentKeyword || (item.title && item.title.includes(currentKeyword));
   });
 
-  // Update category tab counts
+  // Calculate category tab counts based strictly on the selected keyword's contents
   const counts = {
-    all: currentIssues.length,
-    news: currentIssues.filter(i => i.type === 'news').length,
-    youtube: currentIssues.filter(i => i.type === 'youtube').length,
-    sns: currentIssues.filter(i => i.type === 'sns').length
+    all: keywordFiltered.length,
+    news: keywordFiltered.filter(i => i.type === 'news').length,
+    youtube: keywordFiltered.filter(i => i.type === 'youtube').length,
+    sns: keywordFiltered.filter(i => i.type === 'sns').length
   };
 
   const tabs = document.querySelectorAll('.tab-btn');
@@ -265,13 +307,21 @@ function renderIssues() {
     tabs[3].textContent = `📱 SNS (${counts.sns})`;
   }
 
+  // Filter list by current category tab
+  const filtered = keywordFiltered.filter(item => {
+    return currentCategory === 'all' || item.type === currentCategory;
+  });
+
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
   let html = `
-    <div class="realtime-bar">
+    <div class="realtime-bar" onclick="refreshFeed()" style="cursor: pointer;" title="클릭 시 최신 소식 실시간 새로고침">
       <div class="realtime-indicator">
         <div class="live-dot"></div>
-        <span>접속 시점 기준 실시간 이슈 피드</span>
+        <span>실시간 이슈 피드 🔄 <strong>새로고침</strong></span>
       </div>
-      <span style="font-size: 11px; opacity: 0.8;" id="updateTimestamp">방금 업데이트</span>
+      <span style="font-size: 11px; opacity: 0.9;" id="updateTimestamp">${timeStr} 갱신 완료</span>
     </div>
   `;
 
@@ -296,6 +346,7 @@ function renderIssues() {
 
       const titleAttr = (item.title || '').replace(/"/g, '&quot;');
       const contentAttr = (item.content || item.title || '').replace(/"/g, '&quot;');
+      const urlAttr = (item.url || '#').replace(/'/g, "\\'");
       const isScrapped = StorageManager.isScrapped(item.title);
       const scrapBtnHtml = isScrapped
         ? `<button class="card-action-btn scrapped" onclick="toggleScrap(this, '${titleAttr}')">★ 스크랩됨</button>`
@@ -323,7 +374,7 @@ function renderIssues() {
           <div class="card-footer">
             <div class="card-btns">
               ${scrapBtnHtml}
-              <button class="card-action-btn" onclick="shareArticle('${(item.title || '').replace(/'/g, "")}')">🔗 공유</button>
+              <button class="card-action-btn" onclick="shareArticle('${titleAttr}', '${urlAttr}')">🔗 공유</button>
             </div>
             <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="link-btn" onclick="openContentUrl('${item.url}', event)">${linkText}</a>
           </div>
@@ -343,26 +394,38 @@ function switchCategory(cat, btn) {
   renderIssues();
 }
 
-function triggerNotificationTest() {
+function triggerRealPushNotification(title, body) {
   const push = document.getElementById('pushBanner');
   if (push) {
+    const titleElem = push.querySelector('.push-title span:first-child');
+    const descElem = push.querySelector('.push-desc');
+    if (titleElem) titleElem.textContent = title;
+    if (descElem) descElem.textContent = body;
     push.classList.add('show');
-    setTimeout(() => push.classList.remove('show'), 4500);
+    setTimeout(() => push.classList.remove('show'), 5000);
   }
 
-  if ('Notification' in window) {
-    Notification.requestPermission().then(permission => {
-      if (permission === 'granted' && navigator.serviceWorker && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.ready.then(registration => {
-          registration.showNotification('🔔 용인 핫이슈 실시간 알림', {
-            body: '[처인구] 반도체 클러스터 우회도로 확장 착공 공식 발표 - FactChat 3줄 요약 수신완료',
-            icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="%232563eb"/><text x="50" y="65" font-size="50" font-weight="bold" text-anchor="middle" fill="white">🔔</text></svg>',
-            vibrate: [200, 100, 200]
-          });
+  showToast(`🔔 ${title}`);
+
+  if ('Notification' in window && Notification.permission === 'granted') {
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.showNotification(title, {
+          body: body,
+          vibrate: [200, 100, 200]
         });
-      }
-    });
+      });
+    } else {
+      new Notification(title, { body: body });
+    }
   }
+}
+
+function triggerNotificationTest() {
+  triggerRealPushNotification(
+    `🔔 [속보 알림] #${currentKeyword || '용인시'} 주요 이슈`,
+    `[${currentKeyword || '용인시'}] 실시간 주요 소식 수집 및 FactChat AI 3줄 요약 수신완료`
+  );
 }
 
 function toggleSettingsModal() {
@@ -425,17 +488,40 @@ function showToast(msg) {
   }, 2500);
 }
 
-function shareArticle(title, url) {
-  const shareUrl = url || window.location.href;
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      showToast(`🔗 링크가 클립보드에 복사되었습니다.`);
-    }).catch(() => {
-      showToast(`🔗 공유 링크 복사 완료`);
-    });
-  } else {
-    showToast(`🔗 '${(title || '').slice(0, 15)}...' 링크가 복사되었습니다.`);
+async function shareArticle(title, url) {
+  const articleUrl = (url && url !== '#') ? url : window.location.href;
+  const cleanTitle = (title || '용인 핫이슈').replace(/&quot;/g, '"');
+  const shareData = {
+    title: cleanTitle,
+    text: `[용인 핫이슈 모니터] ${cleanTitle}`,
+    url: articleUrl
+  };
+
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+      showToast('🔗 원문 링크 공유가 완료되었습니다.');
+      return;
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.warn('Web Share API error:', err);
+      } else {
+        return;
+      }
+    }
   }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(articleUrl);
+      showToast('🔗 콘텐츠 원문 링크가 클립보드에 복사되었습니다!');
+      return;
+    } catch (err) {
+      console.warn('Clipboard write error:', err);
+    }
+  }
+
+  prompt('아래 콘텐츠 원문 링크를 복사하여 공유하세요:', articleUrl);
 }
 
 function updateNotifySetting(key, inputElem) {
@@ -444,6 +530,56 @@ function updateNotifySetting(key, inputElem) {
   StorageManager.saveNotifySettings(settings);
   const labelStr = key === 'realtime' ? '실시간 속보' : (key === 'negative' ? '관심/위험 이슈' : '정기 브리핑');
   showToast(`${labelStr} 알림이 ${inputElem.checked ? 'ON 설정' : 'OFF 해제'}되었습니다.`);
+}
+
+function updateNotifyInterval(selectElem) {
+  const val = parseInt(selectElem.value, 10) || 15;
+  const settings = StorageManager.getNotifySettings();
+  settings.intervalMinutes = val;
+  StorageManager.saveNotifySettings(settings);
+
+  startAutoPolling();
+  showToast(`⏱️ 푸시 알림 주기가 ${val}분 마다로 설정되었습니다.`);
+}
+
+let autoPollingTimer = null;
+
+function startAutoPolling() {
+  if (autoPollingTimer) clearInterval(autoPollingTimer);
+
+  const settings = StorageManager.getNotifySettings();
+  const intervalMin = settings.intervalMinutes || 15;
+  const intervalMs = intervalMin * 60 * 1000;
+
+  autoPollingTimer = setInterval(async () => {
+    const notifySettings = StorageManager.getNotifySettings();
+    if (!notifySettings || !notifySettings.realtime) return;
+
+    const userKeywords = StorageManager.getKeywords();
+    if (!userKeywords || userKeywords.length === 0) return;
+
+    try {
+      const latestIssues = await IssueApi.fetchKeywordIssues(userKeywords);
+      if (latestIssues && latestIssues.length > 0) {
+        const previousTitles = new Set(currentIssues.map(i => i.title));
+        const newItems = latestIssues.filter(i => !previousTitles.has(i.title));
+
+        currentIssues = latestIssues;
+        renderKeywordChips();
+        renderIssues();
+
+        if (newItems.length > 0) {
+          const topItem = newItems[0];
+          triggerRealPushNotification(
+            `🔔 [신규 속보] #${topItem.keyword || '용인시'} 새 이슈`,
+            topItem.title
+          );
+        }
+      }
+    } catch (err) {
+      console.warn('Auto polling check error:', err);
+    }
+  }, intervalMs);
 }
 
 function togglePasswordVisibility() {
@@ -559,10 +695,13 @@ function updateClock() {
   const now = new Date();
   const hours = String(now.getHours()).padStart(2, '0');
   const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
   const timeElem = document.getElementById('liveTime');
   const tsElem = document.getElementById('updateTimestamp');
   if (timeElem) timeElem.textContent = `${hours}:${minutes}`;
-  if (tsElem) tsElem.textContent = `${hours}:${minutes} 기준 최신`;
+  if (tsElem && !tsElem.textContent.includes('갱신 완료')) {
+    tsElem.textContent = `${hours}:${minutes}:${seconds} 갱신 완료`;
+  }
 }
 
 function installPWA() {
@@ -605,11 +744,21 @@ document.addEventListener('DOMContentLoaded', () => {
     deferredPrompt = e;
   });
 
+  // Initialize notification interval UI
+  const notifySettings = StorageManager.getNotifySettings();
+  const selectElem = document.getElementById('notifyIntervalSelect');
+  if (selectElem && notifySettings.intervalMinutes) {
+    selectElem.value = String(notifySettings.intervalMinutes);
+  }
+
   // Clock Timer
   setInterval(updateClock, 1000);
   updateClock();
 
-  // Load Issues
+  // Start auto-polling with user preferred interval (default 15 min)
+  startAutoPolling();
+
+  // Initial Load Issues
   IssueApi.loadDefaultIssues().then(issues => {
     currentIssues = issues;
     renderKeywordChips();

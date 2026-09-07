@@ -387,6 +387,15 @@ body {
   100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
+.spin-icon {
+  display: inline-block;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
+
 /* Issue Card */
 .issue-card {
   background: var(--card-bg);
@@ -398,7 +407,14 @@ body {
   flex-direction: column;
   gap: 12px;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  animation: cardFadeIn 0.3s ease-out;
 }
+
+@keyframes cardFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 
 .issue-card:hover {
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
@@ -794,3 +810,34 @@ input:checked + .slider:before { transform: translateX(20px); }
 .demo-btn-secondary:hover {
   background: #475569;
 }
+
+/* Mobile Viewport & PWA Standalone Native Layout */
+@media (max-width: 768px), (display-mode: standalone) {
+  body {
+    padding: 0 !important;
+    margin: 0 !important;
+    background-color: #F8FAFC !important;
+    min-height: 100vh;
+    min-height: 100dvh;
+    justify-content: flex-start !important;
+    overflow: hidden;
+  }
+
+  .demo-header,
+  .controls-panel,
+  .phone-notch,
+  .phone-status-bar {
+    display: none !important;
+  }
+
+  .phone-container {
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-width: 100% !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
+

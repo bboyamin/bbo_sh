@@ -145,6 +145,19 @@
             </label>
           </div>
 
+          <div class="setting-item">
+            <div class="setting-info">
+              <h4>⏱️ 4) 속보 감지 & 푸시 알림 주기</h4>
+              <p>백엔드 실시간 소식 감지 및 푸시 알림 간격</p>
+            </div>
+            <select id="notifyIntervalSelect" onchange="updateNotifyInterval(this)" style="padding: 6px 10px; border-radius: 8px; border: 1px solid #CBD5E1; font-size: 12px; font-weight: 700; background: #F8FAFC; color: #1E293B; cursor: pointer;">
+              <option value="15" selected>15분 마다 (권장)</option>
+              <option value="30">30분 마다</option>
+              <option value="60">1시간 마다</option>
+              <option value="180">3시간 마다</option>
+            </select>
+          </div>
+
           <div style="margin-top: 16px;">
             <h4 style="font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">📌 모니터링 키워드 관리</h4>
             <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="settingsKeywordChips">
