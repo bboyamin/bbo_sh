@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>용인 핫이슈 모니터 - 모바일 앱 시연 프로토타입</title>
+  
+  <!-- PWA Meta Tags -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%232563eb'/><text x='50' y='65' font-size='50' font-weight='bold' text-anchor='middle' fill='white'>🔔</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Modular Design System CSS -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <div class="demo-header">
+    <h1>용인 핫이슈 모니터 <span class="badge">모바일 앱 시연</span></h1>
+    <p>용인시 · 처인구 실시간 다채널 이슈 수집 및 AI 3줄 요약 푸시 알림 앱 프로토타입</p>
+  </div>
+
+  <!-- Mobile Frame Container -->
+  <div class="phone-container">
+    <div class="phone-notch"></div>
+
+    <!-- Status Bar -->
+    <div class="phone-status-bar">
+      <span id="liveTime">09:41</span>
+      <span>📶 5G 🔋 98%</span>
+    </div>
+
+    <!-- Simulated Push Notification Banner -->
+    <div class="push-notification" id="pushBanner">
+      <div class="push-icon">🔔</div>
+      <div class="push-content">
+        <div class="push-title">
+          <span>[속보 알림] 처인구 이슈</span>
+          <span class="push-time">방금 전</span>
+        </div>
+        <div class="push-desc">용인 처인구 반도체 클러스터 도로 확장 기본계획 최종 승인 발표!</div>
+      </div>
+    </div>
+
+    <!-- App Main Screen -->
+    <div class="app-screen">
+
+      <!-- Top Header -->
+      <div class="app-header">
+        <div class="app-title-bar">
+          <div class="app-logo">
+            <img src="yongin_logo.png" alt="용인특례시 로고" class="app-logo-img">
+            <div class="app-logo-text">이슈 알리미</div>
+          </div>
+          <div class="header-actions">
+            <button class="icon-btn" onclick="triggerNotificationTest()" title="실시간 알림 테스트">
+              🔔
+              <span class="badge-dot"></span>
+            </button>
+            <button class="icon-btn" onclick="toggleSettingsModal()" title="알림 및 키워드 설정">
+              ⚙️
+            </button>
+          </div>
+        </div>
+
+        <!-- Keyword Chips -->
+        <div class="keyword-chips" id="keywordChips">
+          <!-- Rendered dynamically by app.js -->
+        </div>
+      </div>
+
+      <!-- Category Filter Tabs -->
+      <div class="category-tabs">
+        <button class="tab-btn active" onclick="switchCategory('all', this)">전체 (0)</button>
+        <button class="tab-btn" onclick="switchCategory('news', this)">📰 뉴스 (0)</button>
+        <button class="tab-btn" onclick="switchCategory('youtube', this)">🎥 유튜브 (0)</button>
+        <button class="tab-btn" onclick="switchCategory('sns', this)">📱 SNS (0)</button>
+      </div>
+
+      <!-- Feed Container -->
+      <div class="feed-container" id="feedContainer">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+
+      <!-- Bottom Navigation Bar -->
+      <div class="app-bottom-nav">
+        <button class="nav-item active" onclick="switchNavTab('feed', this)">
+          <span class="nav-icon">🏠</span>
+          <span>실시간 피드</span>
+        </button>
+        <button class="nav-item" onclick="switchNavTab('bookmark', this)">
+          <span class="nav-icon">⭐</span>
+          <span>보관함 <span id="scrapBadge" style="background:#EF4444; color:#FFF; font-size:10px; padding:1px 5px; border-radius:10px; font-weight:800; display:none; vertical-align:middle;">0</span></span>
+        </button>
+        <button class="nav-item" onclick="toggleSettingsModal()">
+          <span class="nav-icon">⚙️</span>
+          <span>알림 설정</span>
+        </button>
+      </div>
+
+      <!-- Bottom Sheet Modal for Notification Settings -->
+      <div class="modal-overlay" id="settingsModal">
+        <div class="modal-content">
+          <div class="modal-head">
+            <h3>⚙️ 이슈 알림 & 키워드 설정</h3>
+            <button class="modal-close" onclick="toggleSettingsModal()">✕</button>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <h4>🔔 1) 실시간 속보 푸시 알림</h4>
+              <p>새로운 이슈 등록 시 스마트폰에 즉시 알림 전송</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="realtimePushToggle" checked onchange="updateNotifySetting('realtime', this)">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <h4>🚨 2) 관심/위험 이슈 속보 알림</h4>
+              <p>민원·정체·사고 등 관심 이슈 감지 시 즉시 알림</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="negativePushToggle" checked onchange="updateNotifySetting('negative', this)">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <h4>☀️ 3) 정기 브리핑 푸시 알림</h4>
+              <p>매일 오전 8시 / 오후 6시 주요 이슈 TOP 5 요약</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="briefingPushToggle" checked onchange="updateNotifySetting('briefing', this)">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div style="margin-top: 16px;">
+            <h4 style="font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">📌 모니터링 키워드 관리</h4>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="settingsKeywordChips">
+              <!-- Dynamically rendered -->
+            </div>
+          </div>
+
+          <!-- FactChat API Key Setting Section -->
+          <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid #E2E8F0;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+              <h4 style="font-size: 13px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 4px;">
+                🔑 사내 FactChat API 개인 키 설정
+              </h4>
+              <span id="factchatKeyBadge" class="api-key-badge warning">⚠️ 키 입력 필요</span>
+            </div>
+            
+            <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+              <div style="position: relative; flex: 1;">
+                <input type="password" id="factchatApiKeyInput" value="" placeholder="사내 FactChat API 키 입력" style="width: 100%; padding: 8px 30px 8px 10px; border: 1px solid #CBD5E1; border-radius: 8px; font-size: 12px; font-family: monospace;">
+                <button type="button" onclick="togglePasswordVisibility()" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 14px; cursor: pointer; color: #64748B;" title="키 보이기/숨기기">👁️</button>
+              </div>
+              <button type="button" onclick="saveFactchatKey()" style="background: var(--primary); color: white; border: none; padding: 0 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">저장</button>
+            </div>
+
+            <!-- Key Guidance Box -->
+            <div class="api-guidance-box">
+              💡 <strong>사내 FactChat API 키가 없으신가요?</strong><br>
+              사내 포털에서 개인 발급키를 발급받아 입력하시면 AI 3줄 요약이 가동됩니다.
+              <a href="#" onclick="showKeyIssuanceGuide(); return false;" style="color: var(--primary); font-weight: 700; text-decoration: underline; margin-left: 2px;">[🔑 키 발급 가이드 보기]</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Outside Control Buttons -->
+  <div class="controls-panel">
+    <button class="demo-btn" onclick="triggerNotificationTest()">🔔 실시간 속보 푸시 알림 테스트</button>
+    <button class="demo-btn demo-btn-secondary" onclick="toggleSettingsModal()">⚙️ 알림 설정 열기</button>
+    <button class="demo-btn" style="background: linear-gradient(135deg, #10B981, #059669);" onclick="installPWA()">📱 스마트폰 앱으로 설치하기 (PWA)</button>
+  </div>
+
+  <!-- Deep Module Scripts -->
+  <script src="js/storage.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

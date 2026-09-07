@@ -4,3 +4,7 @@ welfare.db
 temp_docs/
 node_modules/
 .DS_Store
+.env
+__pycache__/
+*.pyc
+.vercel/

@@ -1,0 +1,22 @@
+{
+  "name": "용인 핫이슈 모니터",
+  "short_name": "용인핫이슈",
+  "description": "용인시, 처인구, 용인특례시 실시간 뉴스 및 SNS 이슈 AI 3줄 요약 & 실시간 알림",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%232563eb'/><text x='50' y='65' font-size='50' font-weight='bold' text-anchor='middle' fill='white'>🔔</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%232563eb'/><text x='50' y='65' font-size='50' font-weight='bold' text-anchor='middle' fill='white'>🔔</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

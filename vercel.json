@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/collect", "destination": "/api/collect.py" },
+    { "source": "/", "destination": "/LocalIssueNotifier/index.html" },
+    { "source": "/(.*)", "destination": "/LocalIssueNotifier/$1" }
+  ]
+}
