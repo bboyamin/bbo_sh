@@ -275,6 +275,15 @@ def fetch_naver_blog(keyword, limit=3):
                 clean_desc = BeautifulSoup(item.get("description", ""), "html.parser").text
                 link = item.get("link", "")
                 blogger = item.get("bloggername") or "네이버 블로그"
+                postdate = item.get("postdate", "")
+                
+                blog_time = "최신 속보"
+                if len(postdate) == 8:
+                    today_str = datetime.now().strftime("%Y%m%d")
+                    if postdate == today_str:
+                        blog_time = "오늘"
+                    else:
+                        blog_time = f"{postdate[4:6]}/{postdate[6:8]}"
 
                 items.append({
                     "id": f"naver_blog_{keyword}_{idx}_{int(datetime.now().timestamp())}",
@@ -283,7 +292,7 @@ def fetch_naver_blog(keyword, limit=3):
                     "badge": "📱 네이버블로그",
                     "publisher": blogger,
                     "title": clean_title,
-                    "time": "방금 전",
+                    "time": blog_time,
                     "url": link,
                     "content": clean_desc
                 })
