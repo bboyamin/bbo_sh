@@ -237,43 +237,50 @@ body {
 /* Keyword Pill Badges */
 .keyword-chips {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scrollbar-width: none;
+  gap: 8px 6px;
+  padding: 4px 0 6px 0;
+  max-width: 100%;
 }
 
-.keyword-chips::-webkit-scrollbar { display: none; }
-
 .chip {
-  background: var(--primary-light);
-  color: var(--primary);
-  padding: 5px 10px;
-  border-radius: 16px;
-  font-size: 12px;
-  font-weight: 700;
+  background: #F1F5F9;
+  color: #334155;
+  padding: 6px 12px;
+  border-radius: 18px;
+  font-size: 13px;
+  font-weight: 600;
   white-space: nowrap;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
   cursor: pointer;
+  border: 1px solid #E2E8F0;
+  transition: all 0.2s ease;
+}
+
+.chip:hover {
+  background: #E2E8F0;
+  color: #0F172A;
 }
 
 .chip.active {
-  background: var(--primary);
+  background: var(--primary, #0052CC);
   color: #FFFFFF;
+  border-color: var(--primary, #0052CC);
+  box-shadow: 0 2px 6px rgba(0, 82, 204, 0.25);
 }
 
 .chip-delete {
-  margin-left: 3px;
+  margin-left: 4px;
   font-weight: 700;
-  font-size: 11px;
+  font-size: 12px;
   color: #94A3B8;
   cursor: pointer;
   border-radius: 50%;
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -281,7 +288,30 @@ body {
 }
 
 .chip.active .chip-delete {
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.chip.active .chip-delete:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.chip-add {
+  background: #EFF6FF;
+  color: #2563EB;
+  border: 1px dashed #93C5FD;
+  padding: 6px 12px;
+  border-radius: 18px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.chip-add:hover {
+  background: #DBEAFE;
 }
 
 .chip-delete:hover {
