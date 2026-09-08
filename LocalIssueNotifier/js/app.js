@@ -372,7 +372,7 @@ function renderIssues() {
               ${scrapBtnHtml}
               <button class="card-action-btn" onclick="shareArticle('${titleAttr}', '${urlAttr}')">🔗 공유</button>
             </div>
-            <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="link-btn" onclick="openContentUrl('${item.url}', event)">${linkText}</a>
+            <a href="${item.url || '#'}" target="_blank" rel="noopener noreferrer" class="link-btn">${linkText}</a>
           </div>
         </div>
       `;
@@ -746,13 +746,11 @@ async function toggleOnDemandAiSummary(btn) {
 }
 
 function openContentUrl(url, event) {
-  if (event) {
-    event.preventDefault();
-    event.stopPropagation();
+  if (!url || url === '#') {
+    if (event) event.preventDefault();
+    return false;
   }
-  if (url && url !== '#') {
-    window.open(url, '_blank', 'noopener,noreferrer');
-  }
+  return true;
 }
 
 function updateClock() {
