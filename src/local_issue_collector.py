@@ -2,12 +2,33 @@ import os
 import json
 import requests
 import urllib.parse
-from datetime import datetime
+import email.utils
+from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 from difflib import SequenceMatcher
 from dotenv import load_dotenv
 
 load_dotenv()
+
+def format_pub_date(pub_date_str):
+    if not pub_date_str:
+        return "최신 속보"
+    try:
+        dt = email.utils.parsedate_to_datetime(pub_date_str)
+        now = datetime.now(timezone.utc)
+        diff_sec = (now - dt).total_seconds()
+        if diff_sec <= 0:
+            return "방금 전"
+        if diff_sec < 3600:
+            mins = max(1, int(diff_sec // 60))
+            return f"{mins}분 전"
+        elif diff_sec < 86400:
+            hours = int(diff_sec // 3600)
+            return f"{hours}시간 전"
+        else:
+            return dt.strftime("%m/%d %H:%M")
+    except Exception:
+        return pub_date_str[:16] if len(pub_date_str) > 16 else "최신 속보"
 
 def clean_base_url(url):
     if not url:
@@ -214,7 +235,7 @@ def fetch_naver_news(keyword, limit=5):
                     "badge": "📰 네이버뉴스",
                     "publisher": "네이버 뉴스",
                     "title": clean_title,
-                    "time": pub_date_raw[:16] if pub_date_raw else "최신 속보",
+                    "time": format_pub_date(pub_date_raw),
                     "url": link,
                     "content": clean_desc
                 })
@@ -308,7 +329,7 @@ def fetch_google_news_rss(keyword, limit=15):
                     "badge": "📰 뉴스",
                     "publisher": publisher,
                     "title": title,
-                    "time": pub_date[:16] if len(pub_date) > 16 else "방금 전",
+                    "time": format_pub_date(pub_date),
                     "url": link,
                     "content": clean_desc
                 })

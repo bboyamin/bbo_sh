@@ -61,15 +61,9 @@ async function fetchKeywordIssues(keywordsList) {
 async function selectKeyword(kw) {
   currentKeyword = kw;
   renderKeywordChips();
-
-  const hasItems = currentIssues.some(item => item.keyword === kw || (item.title && item.title.includes(kw)));
   renderIssues();
-
-  if (!hasItems) {
-    showToast(`🔄 '${kw}' 최신 소식 수집 중...`);
-    const keywords = StorageManager.getKeywords();
-    await fetchKeywordIssues(keywords);
-  }
+  showToast(`🔄 '${kw}' 실시간 최신 소식 수집 중...`);
+  await refreshFeed();
 }
 
 async function addNewKeyword() {
@@ -828,10 +822,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Start auto-polling with user preferred interval (default 15 min)
   startAutoPolling();
 
-  // Initial Load Issues
+  // Initial Load Issues: Show fast UI, then immediately refresh live feed!
   IssueApi.loadDefaultIssues().then(issues => {
     currentIssues = issues;
     renderKeywordChips();
     renderIssues();
+    refreshFeed();
   });
 });
